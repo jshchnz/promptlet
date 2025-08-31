@@ -58,6 +58,9 @@ struct ModernPermissionsPage: View {
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
                         showCards = true
                     }
+                    
+                    // Start monitoring permissions for live updates
+                    permissionManager.startMonitoringPermissions()
                 }
                 
                 // Title and subtitle

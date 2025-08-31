@@ -154,6 +154,7 @@ struct ModernOnboardingView: View {
     }
     
     private func completeOnboarding() {
+        permissionManager.stopMonitoring()
         settings.hasCompletedOnboarding = true
         settings.onboardingVersion = 2
         onComplete()

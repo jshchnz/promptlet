@@ -16,8 +16,17 @@ class PermissionManager: ObservableObject {
     @Published var hasAppleEventsPermission = false
     @Published var isCheckingPermissions = false
     
+    private var monitoringTimer: Timer?
+    
     private init() {
         checkAllPermissions()
+        setupAppActivationListener()
+    }
+    
+    deinit {
+        monitoringTimer?.invalidate()
+        monitoringTimer = nil
+        NotificationCenter.default.removeObserver(self)
     }
     
     // MARK: - Permission Checking
@@ -33,10 +42,11 @@ class PermissionManager: ObservableObject {
     }
     
     func checkAppleEventsPermission() {
-        // Apple Events permission is harder to check directly
-        // We'll assume it's granted if we can get here
-        // In practice, the system will prompt when needed
-        hasAppleEventsPermission = true
+        // Check Apple Events permission by trying to execute a simple AppleScript
+        let appleScript = NSAppleScript(source: "return true")
+        var error: NSDictionary?
+        let _ = appleScript?.executeAndReturnError(&error)
+        hasAppleEventsPermission = (error == nil)
     }
     
     // MARK: - Permission Requesting
@@ -89,9 +99,29 @@ class PermissionManager: ObservableObject {
     // MARK: - Monitoring
     
     func startMonitoringPermissions() {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+        // Don't start multiple timers
+        guard monitoringTimer == nil else { return }
+        
+        monitoringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self.checkAllPermissions()
+                self?.checkAllPermissions()
+            }
+        }
+    }
+    
+    func stopMonitoring() {
+        monitoringTimer?.invalidate()
+        monitoringTimer = nil
+    }
+    
+    private func setupAppActivationListener() {
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkAllPermissions()
             }
         }
     }
