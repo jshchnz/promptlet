@@ -2,7 +2,7 @@
 //  ModernPermissionsPage.swift
 //  Promptlet
 //
-//  Permissions request - no scrolling, fixed layout
+//  Permissions request - pixel-perfect spacing
 //
 
 import SwiftUI
@@ -13,8 +13,9 @@ struct ModernPermissionsPage: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // Top spacing - 20px
             Spacer()
-                .frame(height: 50)
+                .frame(height: 20)
             
             // Icon - 60x60
             Image(systemName: "lock.shield.fill")
@@ -30,10 +31,11 @@ struct ModernPermissionsPage: View {
                 )
                 .frame(width: 60, height: 60)
             
+            // Spacing - 20px
             Spacer()
-                .frame(height: 24)
+                .frame(height: 20)
             
-            // Title
+            // Title - ~45px
             VStack(spacing: 8) {
                 Text(permissionManager.allPermissionsGranted ? "Permissions Granted" : "Permissions Required")
                     .font(.system(size: 20, weight: .semibold))
@@ -44,13 +46,15 @@ struct ModernPermissionsPage: View {
                     : "Promptlet needs permissions to work properly")
                     .font(.system(size: 13))
                     .foregroundColor(.secondaryText)
+                    .multilineTextAlignment(.center)
             }
             
+            // Spacing - 25px
             Spacer()
-                .frame(height: 40)
+                .frame(height: 25)
             
-            // Permission cards - horizontal layout
-            HStack(spacing: 16) {
+            // Permission cards - ~100px (cards are 140px tall with padding)
+            HStack(spacing: 20) {
                 PermissionCard(
                     title: "Accessibility",
                     description: "Insert text at cursor",
@@ -77,19 +81,20 @@ struct ModernPermissionsPage: View {
                     }
                 )
             }
-            .padding(.horizontal, 60)
+            .frame(height: 100)
             
+            // Spacing - 20px
             Spacer()
-                .frame(height: 40)
+                .frame(height: 20)
             
-            // Success state
+            // Footer - ~15px
             if permissionManager.allPermissionsGranted {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16))
+                        .font(.system(size: 14))
                         .foregroundColor(.success)
                     Text("All set!")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.success)
                 }
                 .transition(.scale.combined(with: .opacity))
@@ -99,9 +104,11 @@ struct ModernPermissionsPage: View {
                     .foregroundColor(.tertiaryText)
             }
             
+            // Bottom spacing - 15px
             Spacer()
+                .frame(height: 15)
         }
-        .frame(width: 600, height: 390)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.2), value: permissionManager.allPermissionsGranted)
     }
     
@@ -126,22 +133,22 @@ struct PermissionCard: View {
     let action: () -> Void
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Icon
             ZStack {
                 Circle()
                     .fill(isGranted ? Color.success.opacity(0.1) : Color.accent.opacity(0.1))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 36, height: 36)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 18))
                     .foregroundColor(isGranted ? .success : .accent)
             }
             
             // Text
             VStack(spacing: 4) {
                 Text(title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.primaryText)
                 
                 Text(description)
@@ -150,25 +157,26 @@ struct PermissionCard: View {
             }
             
             // Action/Status
-            if isChecking {
-                ProgressView()
-                    .scaleEffect(0.7)
-                    .frame(height: 28)
-            } else if isGranted {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.success)
-                    .frame(height: 28)
-            } else {
-                Button("Grant") {
-                    action()
+            Group {
+                if isChecking {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                } else if isGranted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.success)
+                } else {
+                    Button("Grant") {
+                        action()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
             }
+            .frame(height: 24)
         }
-        .frame(width: 220, height: 160)
-        .padding(20)
+        .frame(width: 180)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color.secondaryBackground)

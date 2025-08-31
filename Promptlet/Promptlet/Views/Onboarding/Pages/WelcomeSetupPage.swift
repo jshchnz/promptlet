@@ -2,7 +2,7 @@
 //  WelcomeSetupPage.swift
 //  Promptlet
 //
-//  Welcome and shortcut setup - no scrolling, fixed layout
+//  Welcome and shortcut setup - pixel-perfect spacing
 //
 
 import SwiftUI
@@ -20,12 +20,13 @@ struct WelcomeSetupPage: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // Top spacing - 20px
             Spacer()
-                .frame(height: 50)
+                .frame(height: 20)
             
-            // App icon - 80x80
+            // App icon - 60x60
             Image(systemName: "command.square.fill")
-                .font(.system(size: 56))
+                .font(.system(size: 44))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [Color.accent, Color.accent.opacity(0.8)],
@@ -33,15 +34,16 @@ struct WelcomeSetupPage: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 80, height: 80)
+                .frame(width: 60, height: 60)
             
+            // Spacing - 20px
             Spacer()
-                .frame(height: 24)
+                .frame(height: 20)
             
-            // Title and description
+            // Title and description - ~45px
             VStack(spacing: 8) {
                 Text("Welcome to Promptlet")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.primaryText)
                 
                 Text("Your AI prompts, one shortcut away")
@@ -49,10 +51,11 @@ struct WelcomeSetupPage: View {
                     .foregroundColor(.secondaryText)
             }
             
+            // Spacing - 25px
             Spacer()
-                .frame(height: 40)
+                .frame(height: 25)
             
-            // Shortcut setup section
+            // Shortcut setup section - ~100px
             VStack(spacing: 16) {
                 Text("Choose your activation shortcut")
                     .font(.system(size: 13, weight: .medium))
@@ -93,19 +96,21 @@ struct WelcomeSetupPage: View {
                     .frame(width: 150, height: 28)
                 }
             }
-            .padding(.horizontal, 60)
             
+            // Spacing - 20px
             Spacer()
-                .frame(height: 40)
+                .frame(height: 20)
             
-            // Footer hint
+            // Footer hint - ~15px
             Text("You can change this anytime in Settings")
                 .font(.system(size: 11))
                 .foregroundColor(.tertiaryText)
             
+            // Bottom spacing - 15px
             Spacer()
+                .frame(height: 15)
         }
-        .frame(width: 600, height: 390)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             // Set default shortcut if none exists
             if settings.getShortcut(for: .showPalette) == nil {

@@ -2,7 +2,7 @@
 //  ReadyPage.swift
 //  Promptlet
 //
-//  Final ready page - no scrolling, fixed layout
+//  Final ready page - pixel-perfect spacing
 //
 
 import SwiftUI
@@ -14,8 +14,9 @@ struct ReadyPage: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // Top spacing - 20px
             Spacer()
-                .frame(height: 50)
+                .frame(height: 20)
             
             // Success checkmark - 60x60
             ZStack {
@@ -24,7 +25,7 @@ struct ReadyPage: View {
                     .frame(width: 60, height: 60)
                 
                 Image(systemName: "checkmark")
-                    .font(.system(size: 32, weight: .bold))
+                    .font(.system(size: 30, weight: .bold))
                     .foregroundColor(.success)
                     .scaleEffect(animate ? 1 : 0)
                     .rotationEffect(.degrees(animate ? 0 : -180))
@@ -35,13 +36,14 @@ struct ReadyPage: View {
                 }
             }
             
+            // Spacing - 20px
             Spacer()
-                .frame(height: 24)
+                .frame(height: 20)
             
-            // Title
+            // Title - ~45px
             VStack(spacing: 8) {
                 Text("You're Ready!")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.primaryText)
                 
                 Text("Promptlet is ready to supercharge your workflow")
@@ -49,50 +51,55 @@ struct ReadyPage: View {
                     .foregroundColor(.secondaryText)
             }
             
+            // Spacing - 25px
             Spacer()
-                .frame(height: 40)
+                .frame(height: 25)
             
-            // Quick tips
-            VStack(alignment: .leading, spacing: 16) {
+            // Quick tips - ~80px
+            VStack(alignment: .leading, spacing: 12) {
                 QuickTip(number: 1, text: "Press your shortcut to open Promptlet")
                 QuickTip(number: 2, text: "Type to search your prompts")
                 QuickTip(number: 3, text: "Press Enter to insert at cursor")
             }
-            .padding(.horizontal, 80)
-            .padding(.vertical, 20)
+            .padding(.horizontal, 60)
+            .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.secondaryBackground.opacity(0.5))
             )
+            .frame(height: 80)
             
+            // Spacing - 20px
             Spacer()
-                .frame(height: 32)
+                .frame(height: 20)
             
-            // Test button
+            // Test button - ~30px
             Button(action: onTest) {
                 HStack(spacing: 6) {
                     Image(systemName: "play.circle.fill")
-                        .font(.system(size: 16))
+                        .font(.system(size: 15))
                     Text("Test it now")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                 }
                 .foregroundColor(.accent)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 8)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(Color.accent.opacity(0.1))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: 6)
                                 .stroke(Color.accent, lineWidth: 1.5)
                         )
                 )
             }
             .buttonStyle(.plain)
             
+            // Bottom spacing - 15px
             Spacer()
+                .frame(height: 15)
         }
-        .frame(width: 600, height: 390)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -101,19 +108,19 @@ struct QuickTip: View {
     let text: String
     
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
             ZStack {
                 Circle()
                     .fill(Color.accent)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
                 
                 Text("\(number)")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.white)
             }
             
             Text(text)
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .foregroundColor(.primaryText)
             
             Spacer()

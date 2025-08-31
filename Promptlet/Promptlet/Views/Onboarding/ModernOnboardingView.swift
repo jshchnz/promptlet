@@ -26,7 +26,7 @@ struct ModernOnboardingView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header - exactly 40px
+            // Header - 80px with more padding
             HStack(spacing: Spacing.md) {
                 ProgressDots(currentPage: currentStep, totalPages: actualSteps)
                 
@@ -41,10 +41,10 @@ struct ModernOnboardingView: View {
                     .font(Typography.caption())
                 }
             }
-            .padding(.horizontal, 24)
-            .frame(height: 40)
+            .padding(.horizontal, 60)
+            .frame(height: 80)
             
-            // Content area - exactly 390px
+            // Content area - 340px
             ZStack {
                 switch currentStep {
                 case 0:
@@ -68,10 +68,11 @@ struct ModernOnboardingView: View {
                     EmptyView()
                 }
             }
-            .frame(width: 600, height: 390)
+            .padding(.horizontal, 60)
+            .frame(width: 600, height: 340)
             .animation(.easeInOut(duration: 0.2), value: currentStep)
             
-            // Footer - exactly 70px
+            // Footer - 80px with more padding
             HStack(spacing: Spacing.md) {
                 if currentStep > 0 {
                     Button("Back") {
@@ -91,6 +92,7 @@ struct ModernOnboardingView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .keyboardShortcut(.defaultAction)
                 } else {
                     Button("Continue") {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -100,13 +102,46 @@ struct ModernOnboardingView: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .disabled(!canProceedToNext())
+                    .keyboardShortcut(.defaultAction)
                 }
             }
-            .padding(.horizontal, 24)
-            .frame(height: 70)
+            .padding(.horizontal, 60)
+            .frame(height: 80)
         }
         .frame(width: 600, height: 500)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.windowBackgroundColor))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .onKeyPress(.leftArrow) {
+            if currentStep > 0 {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    currentStep -= 1
+                }
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(.rightArrow) {
+            if currentStep < actualSteps - 1 && canProceedToNext() {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    currentStep += 1
+                }
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(.return) {
+            if currentStep == actualSteps - 1 {
+                completeOnboarding()
+            } else if canProceedToNext() {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    currentStep += 1
+                }
+            }
+            return .handled
+        }
     }
     
     private func canProceedToNext() -> Bool {
