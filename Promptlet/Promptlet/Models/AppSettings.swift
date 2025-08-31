@@ -31,6 +31,19 @@ class AppSettings: ObservableObject {
     @AppStorage("savedWindowPosition") var savedWindowPosition: String?
     @AppStorage("keyboardShortcutsData") private var keyboardShortcutsData: Data = Data()
     
+    // Onboarding
+    @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
+    @AppStorage("onboardingVersion") var onboardingVersion: Int = 0
+    @AppStorage("launchCount") var launchCount: Int = 0
+    
+    // Visual Settings
+    @AppStorage("enableAnimations") var enableAnimations: Bool = true
+    @AppStorage("showMenuBarIcon") var showMenuBarIcon: Bool = true
+    
+    // Debug Settings
+    @AppStorage("debugMode") var debugMode: Bool = false
+    @AppStorage("showTechnicalInfo") var showTechnicalInfo: Bool = false
+    
     @Published var shortcuts: [ShortcutAction: KeyboardShortcut] = [:] {
         didSet {
             saveShortcuts()
@@ -125,5 +138,22 @@ class AppSettings: ObservableObject {
     
     func getShortcut(for action: ShortcutAction) -> KeyboardShortcut? {
         return shortcuts[action]
+    }
+    
+    func resetAllSettings() {
+        // Reset all settings to defaults
+        themeMode = ThemeMode.auto.rawValue
+        defaultPosition = DefaultPosition.center.rawValue
+        savedWindowPosition = nil
+        enableAnimations = true
+        showMenuBarIcon = true
+        debugMode = false
+        showTechnicalInfo = false
+        resetShortcutsToDefault()
+        resetWindowPosition()
+    }
+    
+    func incrementLaunchCount() {
+        launchCount += 1
     }
 }

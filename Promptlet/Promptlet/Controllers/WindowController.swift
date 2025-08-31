@@ -11,6 +11,7 @@ import SwiftUI
 @MainActor
 class WindowController: NSObject, NSWindowDelegate {
     private var paletteWindow: NSWindow?
+    private var onboardingWindow: OnboardingWindow?
     private weak var delegate: WindowControllerDelegate?
     private var currentAnimationContext: NSAnimationContext?
     
@@ -121,6 +122,20 @@ class WindowController: NSObject, NSWindowDelegate {
         return paletteWindow?.isKeyWindow ?? false
     }
     
+    // MARK: - Onboarding Window
+    
+    func showOnboardingWindow(with view: some View) {
+        if onboardingWindow == nil {
+            onboardingWindow = OnboardingWindow()
+        }
+        onboardingWindow?.showOnboarding(with: view)
+    }
+    
+    func hideOnboardingWindow() {
+        onboardingWindow?.close()
+        onboardingWindow = nil
+    }
+    
     // MARK: - Window Positioning
     
     private func positionWindow(_ window: NSWindow, appSettings: AppSettings) {
@@ -191,6 +206,13 @@ class WindowController: NSObject, NSWindowDelegate {
         
         saveWindowPosition(window.frame.origin)
         delegate?.windowDidMove()
+    }
+    
+    func windowWillClose(_ notification: Notification) {
+        if let window = notification.object as? NSWindow,
+           window == onboardingWindow {
+            onboardingWindow = nil
+        }
     }
 }
 

@@ -24,24 +24,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowController: WindowController!
     private var settingsWindow: NSWindow?
     private var promptEditorWindow: NSWindow?
+    private var onboardingWindow: OnboardingWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("[AppDelegate] Application launched")
         
-        // Request accessibility permissions if needed
-        requestAccessibilityPermissions()
-        
-        // Initialize core components
+        // Initialize core components immediately
         promptStore = PromptStore()
         paletteController = PaletteController(store: promptStore)
         appSettings.applyTheme()  // Apply theme after app launches
+        appSettings.incrementLaunchCount()
         
         // Initialize controllers
         menuBarController = MenuBarController(delegate: self, promptStore: promptStore)
         keyboardController = KeyboardController(delegate: self, appSettings: appSettings)
         windowController = WindowController(delegate: self)
         
-        keyboardController.setupGlobalHotkey()
+        // Check if onboarding is needed
+        if !appSettings.hasCompletedOnboarding {
+            print("[AppDelegate] Showing onboarding")
+            showOnboardingWindow()
+        } else {
+            // Only request permissions and setup if onboarding is complete
+            requestAccessibilityPermissions()
+            keyboardController.setupGlobalHotkey()
+        }
         
         // Listen for shortcut changes
         NotificationCenter.default.addObserver(
@@ -52,6 +59,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         
         NSApp.setActivationPolicy(.accessory)
+        
+        // Listen for test notifications from onboarding
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTestShowPalette),
+            name: Notification.Name("ShowPaletteTest"),
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTestHidePalette),
+            name: Notification.Name("HidePaletteTest"),
+            object: nil
+        )
         
         print("[AppDelegate] Setup complete")
     }
@@ -210,6 +231,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("[AppDelegate] Keyboard shortcuts changed, reloading...")
         keyboardController.reloadShortcuts()
     }
+    
+    private func showOnboardingWindow() {
+        if onboardingWindow == nil {
+            onboardingWindow = OnboardingWindow()
+        }
+        
+        let onboardingView = ModernOnboardingView(
+            settings: appSettings,
+            onComplete: { [weak self] in
+                self?.onboardingCompleted()
+            }
+        )
+        
+        onboardingWindow?.showOnboarding(with: onboardingView)
+    }
+    
+    private func onboardingCompleted() {
+        print("[AppDelegate] Onboarding completed")
+        onboardingWindow?.close()
+        onboardingWindow = nil
+        
+        // Now setup permissions and keyboard shortcuts
+        requestAccessibilityPermissions()
+        keyboardController.setupGlobalHotkey()
+        
+        // Show the palette for the first time
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.showPalette()
+        }
+    }
+    
+    @objc private func handleTestShowPalette() {
+        showPalette()
+    }
+    
+    @objc private func handleTestHidePalette() {
+        hidePalette()
+    }
 }
 
 // MARK: - MenuBarDelegate
@@ -252,7 +311,7 @@ extension AppDelegate: MenuBarDelegate {
         
         // Create and show settings window directly
         if settingsWindow == nil {
-            let settingsView = SettingsView(settings: appSettings)
+            let settingsView = ModernSettingsView(settings: appSettings)
             let hostingView = NSHostingView(rootView: settingsView)
             
             let window = NSWindow(
