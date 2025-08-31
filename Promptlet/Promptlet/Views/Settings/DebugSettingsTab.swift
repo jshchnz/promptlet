@@ -37,7 +37,10 @@ struct DebugSettingsTab: View {
                     HStack {
                         Button("View Logs") {
                             showLogs = true
-                            loadDebugLogs()
+                        }
+                        
+                        Button("Clear Logs") {
+                            LogService.shared.clearLogs()
                         }
                         
                         Button("Export Debug Info") {
@@ -101,7 +104,7 @@ struct DebugSettingsTab: View {
         }
         .padding()
         .sheet(isPresented: $showLogs) {
-            LogViewer(logs: $debugOutput)
+            RealLogViewer()
         }
         .alert("Reset Onboarding", isPresented: $showResetOnboardingConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -119,19 +122,6 @@ struct DebugSettingsTab: View {
         return AXIsProcessTrustedWithOptions(options)
     }
     
-    private func loadDebugLogs() {
-        // In a real implementation, this would load actual logs
-        debugOutput = """
-        [2025-08-31 10:00:00] App launched
-        [2025-08-31 10:00:01] Checking permissions...
-        [2025-08-31 10:00:01] Accessibility: Granted
-        [2025-08-31 10:00:02] Loading prompts from storage
-        [2025-08-31 10:00:02] Found 15 prompts
-        [2025-08-31 10:00:03] Keyboard shortcuts registered
-        [2025-08-31 10:00:03] Ready
-        """
-    }
-    
     private func exportDebugInfo() {
         let debugInfo = """
         Promptlet Debug Information
@@ -141,6 +131,10 @@ struct DebugSettingsTab: View {
         macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
         Launch Count: \(settings.launchCount)
         Debug Mode: \(settings.debugMode)
+        
+        Recent Logs:
+        ===========
+        \(LogService.shared.getLogsAsString())
         """
         
         NSPasteboard.general.clearContents()
@@ -163,30 +157,155 @@ struct PermissionStatusView: View {
     }
 }
 
-struct LogViewer: View {
-    @Binding var logs: String
+struct RealLogViewer: View {
     @Environment(\.dismiss) var dismiss
+    @ObservedObject private var logService = LogService.shared
+    @State private var selectedLevel: LogLevel? = nil
+    @State private var searchText = ""
+    
+    private var filteredLogs: [LogEntry] {
+        var logs = logService.logs
+        
+        // Filter by level if selected
+        if let level = selectedLevel {
+            logs = logs.filter { $0.level == level }
+        }
+        
+        // Filter by search text
+        if !searchText.isEmpty {
+            logs = logs.filter { 
+                $0.message.localizedCaseInsensitiveContains(searchText) ||
+                $0.category.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        
+        return logs.reversed() // Show newest first
+    }
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // Header
             HStack {
                 Text("Debug Logs")
                     .font(.headline)
+                
                 Spacer()
+                
+                // Level filter
+                Picker("Level", selection: $selectedLevel) {
+                    Text("All").tag(nil as LogLevel?)
+                    ForEach(LogLevel.allCases, id: \.self) { level in
+                        Text(level.rawValue).tag(level as LogLevel?)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 100)
+                
+                Button("Clear") {
+                    LogService.shared.clearLogs()
+                }
+                .buttonStyle(.bordered)
+                
                 Button("Done") {
                     dismiss()
                 }
+                .buttonStyle(.borderedProminent)
             }
             .padding()
             
-            ScrollView {
-                Text(logs)
-                    .font(.system(.body, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
+            // Search
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                
+                TextField("Search logs...", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
             }
-            .background(Color(NSColor.textBackgroundColor))
+            .padding(.horizontal)
+            
+            Divider()
+            
+            // Logs
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(filteredLogs, id: \.id) { log in
+                        LogEntryView(entry: log)
+                    }
+                    
+                    if filteredLogs.isEmpty {
+                        Text("No logs found")
+                            .foregroundColor(.secondary)
+                            .padding()
+                    }
+                }
+            }
         }
-        .frame(width: 600, height: 400)
+        .frame(width: 800, height: 600)
+    }
+}
+
+struct LogEntryView: View {
+    let entry: LogEntry
+    
+    private var levelColor: Color {
+        switch entry.level {
+        case .info:
+            return .blue
+        case .warning:
+            return .orange
+        case .error:
+            return .red
+        case .debug:
+            return .purple
+        case .success:
+            return .green
+        }
+    }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            // Timestamp
+            Text(formatTimestamp(entry.timestamp))
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .leading)
+            
+            // Level badge
+            Text(entry.level.rawValue)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(levelColor)
+                )
+                .frame(width: 60)
+            
+            // Category
+            Text(entry.category)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(.secondary)
+                .frame(width: 100, alignment: .leading)
+            
+            // Message
+            Text(entry.message)
+                .font(.system(.caption, design: .monospaced))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 2)
+        .background(
+            entry.level == .error ? 
+            Color.red.opacity(0.1) :
+            (entry.level == .warning ? Color.orange.opacity(0.1) : Color.clear)
+        )
+    }
+    
+    private func formatTimestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: date)
     }
 }

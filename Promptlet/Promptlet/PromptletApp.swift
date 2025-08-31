@@ -14,7 +14,7 @@ struct PromptletApp: App {
     
     var body: some Scene {
         Settings {
-            ModernSettingsView(settings: appDelegate.appSettings)
+            SettingsView(settings: appDelegate.appSettings)
         }
     }
 }

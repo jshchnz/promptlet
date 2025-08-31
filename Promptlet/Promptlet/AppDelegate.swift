@@ -28,24 +28,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("[AppDelegate] Application launched")
+        logInfo("AppDelegate", "Application launched")
         
         // Initialize core components immediately
         promptStore = PromptStore()
         paletteController = PaletteController(store: promptStore)
         appSettings.applyTheme()  // Apply theme after app launches
         appSettings.incrementLaunchCount()
+        logInfo("AppDelegate", "Core components initialized")
         
         // Initialize controllers
-        menuBarController = MenuBarController(delegate: self, promptStore: promptStore)
+        menuBarController = MenuBarController(delegate: self, promptStore: promptStore, appSettings: appSettings)
         keyboardController = KeyboardController(delegate: self, appSettings: appSettings)
         windowController = WindowController(delegate: self)
+        logInfo("AppDelegate", "Controllers initialized")
         
         // Check if onboarding is needed
         if !appSettings.hasCompletedOnboarding {
             print("[AppDelegate] Showing onboarding")
+            logInfo("AppDelegate", "Showing onboarding - first launch detected")
             showOnboardingWindow()
         } else {
             // Only request permissions and setup if onboarding is complete
+            logInfo("AppDelegate", "Onboarding already completed, setting up permissions")
             requestAccessibilityPermissions()
             keyboardController.setupGlobalHotkey()
         }
@@ -75,6 +80,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         
         print("[AppDelegate] Setup complete")
+        logSuccess("AppDelegate", "Application setup completed successfully")
     }
     
     private func requestAccessibilityPermissions() {
@@ -83,8 +89,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         if trusted {
             print("[AppDelegate] Accessibility permissions granted")
+            logSuccess("Permissions", "Accessibility permissions granted")
         } else {
             print("[AppDelegate] Accessibility permissions not granted - requesting...")
+            logWarning("Permissions", "Accessibility permissions not granted - requesting user approval")
         }
     }
     
@@ -167,6 +175,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 
                 print("[AppDelegate] Inserted prompt: \(prompt.title)")
+                logSuccess("TextInsertion", "Successfully inserted prompt: \(prompt.title)")
             }
         }
         
@@ -311,7 +320,7 @@ extension AppDelegate: MenuBarDelegate {
         
         // Create and show settings window directly
         if settingsWindow == nil {
-            let settingsView = ModernSettingsView(settings: appSettings)
+            let settingsView = SettingsView(settings: appSettings)
             let hostingView = NSHostingView(rootView: settingsView)
             
             let window = NSWindow(

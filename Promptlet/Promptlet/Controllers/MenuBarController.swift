@@ -10,21 +10,54 @@ import SwiftUI
 
 @MainActor
 class MenuBarController: NSObject {
-    private var statusItem: NSStatusItem!
+    private var statusItem: NSStatusItem?
     private weak var delegate: MenuBarDelegate?
     private weak var promptStore: PromptStore?
+    private weak var appSettings: AppSettings?
     
-    init(delegate: MenuBarDelegate, promptStore: PromptStore) {
+    init(delegate: MenuBarDelegate, promptStore: PromptStore, appSettings: AppSettings) {
         self.delegate = delegate
         self.promptStore = promptStore
+        self.appSettings = appSettings
         super.init()
         setupMenuBar()
+        observeSettings()
+    }
+    
+    private func observeSettings() {
+        // Observe changes to showMenuBarIcon setting
+        guard let settings = appSettings else { return }
+        
+        NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateMenuBarVisibility()
+        }
+    }
+    
+    private func updateMenuBarVisibility() {
+        guard let settings = appSettings else { return }
+        
+        if settings.showMenuBarIcon {
+            if statusItem == nil {
+                setupMenuBar()
+            }
+        } else {
+            if let statusItem = statusItem {
+                NSStatusBar.system.removeStatusItem(statusItem)
+                self.statusItem = nil
+            }
+        }
     }
     
     private func setupMenuBar() {
+        guard appSettings?.showMenuBarIcon == true else { return }
+        
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
-        if let button = statusItem.button {
+        if let button = statusItem?.button {
             // Good SF Symbol options for a prompt/snippet manager:
             // "text.quote" - quotation marks, good for text snippets
             // "command" - clean command key symbol
@@ -51,6 +84,8 @@ class MenuBarController: NSObject {
     }
     
     func createMenu() {
+        guard let statusItem = statusItem else { return }
+        
         let menu = NSMenu()
         
         let openItem = NSMenuItem(title: "Open Palette (⌘. or ⌃⌘Space)", action: #selector(showPalette), keyEquivalent: ".")
@@ -122,32 +157,32 @@ class MenuBarController: NSObject {
     }
     
     func showInsertedFeedback() {
-        if let button = statusItem.button {
-            let originalTitle = button.title
-            let originalImage = button.image
-            
-            button.title = "✓"
-            button.image = nil
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                button.title = originalTitle
-                button.image = originalImage
-            }
+        guard let button = statusItem?.button else { return }
+        
+        let originalTitle = button.title
+        let originalImage = button.image
+        
+        button.title = "✓"
+        button.image = nil
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            button.title = originalTitle
+            button.image = originalImage
         }
     }
     
     func showResetFeedback() {
-        if let button = statusItem.button {
-            let originalTitle = button.title
-            let originalImage = button.image
-            
-            button.title = "↻"
-            button.image = nil
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                button.title = originalTitle
-                button.image = originalImage
-            }
+        guard let button = statusItem?.button else { return }
+        
+        let originalTitle = button.title
+        let originalImage = button.image
+        
+        button.title = "↻"
+        button.image = nil
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            button.title = originalTitle
+            button.image = originalImage
         }
     }
 }
