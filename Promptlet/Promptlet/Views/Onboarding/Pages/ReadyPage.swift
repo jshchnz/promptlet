@@ -14,9 +14,9 @@ struct ReadyPage: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Top spacing - 20px
+            // Top spacing - 30px
             Spacer()
-                .frame(height: 20)
+                .frame(height: 30)
             
             // Success checkmark - 60x60
             ZStack {
@@ -36,9 +36,9 @@ struct ReadyPage: View {
                 }
             }
             
-            // Spacing - 20px
+            // Spacing - 25px
             Spacer()
-                .frame(height: 20)
+                .frame(height: 25)
             
             // Title - ~45px
             VStack(spacing: 8) {
@@ -51,9 +51,9 @@ struct ReadyPage: View {
                     .foregroundColor(.secondaryText)
             }
             
-            // Spacing - 25px
+            // Spacing - 35px
             Spacer()
-                .frame(height: 25)
+                .frame(height: 35)
             
             // Quick tips - ~80px
             VStack(alignment: .leading, spacing: 12) {
@@ -69,9 +69,9 @@ struct ReadyPage: View {
             )
             .frame(height: 80)
             
-            // Spacing - 20px
+            // Spacing - 30px
             Spacer()
-                .frame(height: 20)
+                .frame(height: 30)
             
             // Test button - ~30px
             Button(action: onTest) {
@@ -95,9 +95,9 @@ struct ReadyPage: View {
             }
             .buttonStyle(.plain)
             
-            // Bottom spacing - 15px
+            // Bottom spacing - 25px
             Spacer()
-                .frame(height: 15)
+                .frame(height: 25)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

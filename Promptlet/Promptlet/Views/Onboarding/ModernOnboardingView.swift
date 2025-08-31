@@ -15,24 +15,18 @@ struct ModernOnboardingView: View {
     
     let onComplete: () -> Void
     
-    // Check if we need permissions step
-    private var needsPermissions: Bool {
-        !permissionManager.allPermissionsGranted
-    }
-    
-    private var actualSteps: Int {
-        needsPermissions ? 3 : 2
-    }
+    // Always show 3 steps
+    private let totalSteps = 3
     
     var body: some View {
         VStack(spacing: 0) {
             // Header - 80px with more padding
             HStack(spacing: Spacing.md) {
-                ProgressDots(currentPage: currentStep, totalPages: actualSteps)
+                ProgressDots(currentPage: currentStep, totalPages: totalSteps)
                 
                 Spacer()
                 
-                if currentStep < actualSteps - 1 {
+                if currentStep < totalSteps - 1 {
                     Button("Skip") {
                         completeOnboarding()
                     }
@@ -41,10 +35,10 @@ struct ModernOnboardingView: View {
                     .font(Typography.caption())
                 }
             }
-            .padding(.horizontal, 60)
+            .padding(.horizontal, 70)
             .frame(height: 80)
             
-            // Content area - 340px
+            // Content area - 380px
             ZStack {
                 switch currentStep {
                 case 0:
@@ -54,13 +48,8 @@ struct ModernOnboardingView: View {
                             removal: .opacity
                         ))
                 case 1:
-                    if needsPermissions {
-                        ModernPermissionsPage(permissionManager: permissionManager)
-                            .transition(.opacity)
-                    } else {
-                        ReadyPage(onTest: testShortcut)
-                            .transition(.opacity)
-                    }
+                    ModernPermissionsPage(permissionManager: permissionManager)
+                        .transition(.opacity)
                 case 2:
                     ReadyPage(onTest: testShortcut)
                         .transition(.opacity)
@@ -68,8 +57,8 @@ struct ModernOnboardingView: View {
                     EmptyView()
                 }
             }
-            .padding(.horizontal, 60)
-            .frame(width: 600, height: 340)
+            .padding(50)
+            .frame(width: 680, height: 380)
             .animation(.easeInOut(duration: 0.2), value: currentStep)
             
             // Footer - 80px with more padding
@@ -86,7 +75,7 @@ struct ModernOnboardingView: View {
                 
                 Spacer()
                 
-                if currentStep == actualSteps - 1 {
+                if currentStep == totalSteps - 1 {
                     Button("Get Started") {
                         completeOnboarding()
                     }
@@ -105,10 +94,10 @@ struct ModernOnboardingView: View {
                     .keyboardShortcut(.defaultAction)
                 }
             }
-            .padding(.horizontal, 60)
+            .padding(.horizontal, 70)
             .frame(height: 80)
         }
-        .frame(width: 600, height: 500)
+        .frame(width: 680, height: 540)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(NSColor.windowBackgroundColor))
@@ -124,7 +113,7 @@ struct ModernOnboardingView: View {
             return .ignored
         }
         .onKeyPress(.rightArrow) {
-            if currentStep < actualSteps - 1 && canProceedToNext() {
+            if currentStep < totalSteps - 1 && canProceedToNext() {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     currentStep += 1
                 }
@@ -133,7 +122,7 @@ struct ModernOnboardingView: View {
             return .ignored
         }
         .onKeyPress(.return) {
-            if currentStep == actualSteps - 1 {
+            if currentStep == totalSteps - 1 {
                 completeOnboarding()
             } else if canProceedToNext() {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -149,7 +138,7 @@ struct ModernOnboardingView: View {
         case 0:
             return settings.getShortcut(for: .showPalette) != nil
         case 1:
-            return !needsPermissions || permissionManager.allPermissionsGranted
+            return permissionManager.allPermissionsGranted
         default:
             return true
         }

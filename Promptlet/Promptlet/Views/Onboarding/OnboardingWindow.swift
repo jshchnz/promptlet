@@ -11,7 +11,7 @@ import AppKit
 class OnboardingWindow: NSWindow {
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 500),
+            contentRect: NSRect(x: 0, y: 0, width: 680, height: 540),
             styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -20,15 +20,13 @@ class OnboardingWindow: NSWindow {
         self.isReleasedWhenClosed = false
         self.center()
         self.isMovableByWindowBackground = true
-        self.titlebarAppearsTransparent = true
-        self.titleVisibility = .hidden
         self.backgroundColor = NSColor.clear
         
         // Set minimum and maximum size to prevent resizing
-        self.minSize = NSSize(width: 600, height: 500)
-        self.maxSize = NSSize(width: 600, height: 500)
+        self.minSize = NSSize(width: 680, height: 540)
+        self.maxSize = NSSize(width: 680, height: 540)
         
-        // Make window appear on top
+        // Floating level brings to front but allows system dialogs on top
         self.level = .floating
     }
     
@@ -36,5 +34,8 @@ class OnboardingWindow: NSWindow {
         self.contentView = NSHostingView(rootView: view)
         self.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        
+        // Bring to absolute front initially
+        self.orderFrontRegardless()
     }
 }

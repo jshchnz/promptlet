@@ -20,9 +20,9 @@ struct WelcomeSetupPage: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Top spacing - 20px
+            // Top spacing - 30px
             Spacer()
-                .frame(height: 20)
+                .frame(height: 30)
             
             // App icon - 60x60
             Image(systemName: "command.square.fill")
@@ -51,9 +51,9 @@ struct WelcomeSetupPage: View {
                     .foregroundColor(.secondaryText)
             }
             
-            // Spacing - 25px
+            // Spacing - 35px
             Spacer()
-                .frame(height: 25)
+                .frame(height: 35)
             
             // Shortcut setup section - ~100px
             VStack(spacing: 16) {
@@ -106,9 +106,9 @@ struct WelcomeSetupPage: View {
                 .font(.system(size: 11))
                 .foregroundColor(.tertiaryText)
             
-            // Bottom spacing - 15px
+            // Bottom spacing - 25px
             Spacer()
-                .frame(height: 15)
+                .frame(height: 25)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
