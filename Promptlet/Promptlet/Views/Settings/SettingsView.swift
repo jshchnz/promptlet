@@ -14,7 +14,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             // macOS-style toolbar
-            HStack(spacing: 20) {
+            HStack(spacing: 12) {
                 ToolbarButton(
                     title: "General",
                     icon: "gearshape",
@@ -43,7 +43,8 @@ struct SettingsView: View {
                     selection: $selectedTab
                 )
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
             .background(Color(NSColor.windowBackgroundColor))
             
@@ -87,7 +88,7 @@ struct ToolbarButton: View {
         }) {
             VStack(spacing: 2) {
                 Image(systemName: icon)
-                    .font(.system(size: 24))
+                    .font(.system(size: 20))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundColor(isSelected ? .accentColor : .secondary)
                 
@@ -95,14 +96,14 @@ struct ToolbarButton: View {
                     .font(.system(size: 10))
                     .foregroundColor(isSelected ? .primary : .secondary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.gray.opacity(0.2) : Color.clear)
-            )
+            .frame(width: 60, height: 50)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isSelected ? Color.gray.opacity(0.2) : Color.clear)
+        )
     }
 }
 
