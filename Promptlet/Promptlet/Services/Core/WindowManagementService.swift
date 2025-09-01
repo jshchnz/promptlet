@@ -27,7 +27,7 @@ class WindowManagementService: WindowManagementServiceProtocol {
             let hostingView = NSHostingView(rootView: settingsView)
             
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 680, height: 420),
+                contentRect: NSRect(x: 0, y: 0, width: 750, height: 550),
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered,
                 defer: false
@@ -37,6 +37,7 @@ class WindowManagementService: WindowManagementServiceProtocol {
             window.contentView = hostingView
             window.center()
             window.isReleasedWhenClosed = false
+            window.tabbingMode = .disallowed
             
             settingsWindow = window
             logSuccess(.window, "Settings window created")

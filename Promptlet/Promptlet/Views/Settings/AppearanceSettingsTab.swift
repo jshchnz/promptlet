@@ -11,9 +11,10 @@ struct AppearanceSettingsTab: View {
     @ObservedObject var settings: AppSettings
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 30) {
-            // Theme Settings
-            GroupBox {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 30) {
+                // Theme Settings
+                GroupBox {
                 VStack(alignment: .leading, spacing: 16) {
                     LabeledContent("Appearance:") {
                         Picker("", selection: $settings.themeMode) {
@@ -58,8 +59,32 @@ struct AppearanceSettingsTab: View {
                     .font(.headline)
             }
             
-            Spacer()
+            // Quick Slots in Menu Bar
+            GroupBox {
+                VStack(alignment: .leading, spacing: 16) {
+                    Toggle("Show quick slots in menu bar", isOn: $settings.showQuickSlotsInMenuBar)
+                        .disabled(!settings.showMenuBarIcon)
+                    
+                    HStack {
+                        Text("Number of slots to show:")
+                        Stepper(value: $settings.menuBarQuickSlotCount, in: 1...5) {
+                            Text("\(settings.menuBarQuickSlotCount)")
+                                .frame(width: 30)
+                        }
+                        .disabled(!settings.showMenuBarIcon || !settings.showQuickSlotsInMenuBar)
+                    }
+                    
+                    Text("Display your first 1-5 quick slot prompts directly in the menu bar for instant access")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                .padding(4)
+            } label: {
+                Label("Quick Slots", systemImage: "keyboard")
+                    .font(.headline)
+            }
+            }
+            .padding()
         }
-        .padding()
     }
 }

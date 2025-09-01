@@ -21,7 +21,7 @@ struct KeyboardSettingsTab: View {
     ]
     
     var body: some View {
-        HSplitView {
+        HStack(spacing: 0) {
             // Sidebar
             List(selection: $selectedCategory) {
                 ForEach(categories, id: \.0) { category, icon, _ in
@@ -31,6 +31,9 @@ struct KeyboardSettingsTab: View {
             }
             .listStyle(.sidebar)
             .frame(width: 150)
+            .background(Color(NSColor.controlBackgroundColor))
+            
+            Divider()
             
             // Content
             ScrollView {
@@ -62,6 +65,7 @@ struct KeyboardSettingsTab: View {
                     }
                 }
                 .padding()
+                .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

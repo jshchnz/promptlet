@@ -39,6 +39,8 @@ class AppSettings: ObservableObject {
     // Visual Settings
     @AppStorage("enableAnimations") var enableAnimations: Bool = true
     @AppStorage("showMenuBarIcon") var showMenuBarIcon: Bool = true
+    @AppStorage("showQuickSlotsInMenuBar") var showQuickSlotsInMenuBar: Bool = true
+    @AppStorage("menuBarQuickSlotCount") var menuBarQuickSlotCount: Int = 5
     
     // Debug Settings
     @AppStorage("debugMode") var debugMode: Bool = false
@@ -147,6 +149,8 @@ class AppSettings: ObservableObject {
         savedWindowPosition = nil
         enableAnimations = true
         showMenuBarIcon = true
+        showQuickSlotsInMenuBar = true
+        menuBarQuickSlotCount = 5
         debugMode = false
         showTechnicalInfo = false
         resetShortcutsToDefault()

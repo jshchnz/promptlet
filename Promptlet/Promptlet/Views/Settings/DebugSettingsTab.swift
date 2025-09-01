@@ -13,9 +13,10 @@ struct DebugSettingsTab: View {
     @State private var showResetOnboardingConfirmation = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 30) {
-            // Developer Options
-            GroupBox {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 30) {
+                // Developer Options
+                GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("Enable debug logging", isOn: $settings.debugMode)
                     
@@ -98,10 +99,9 @@ struct DebugSettingsTab: View {
                 Label("System Information", systemImage: "info.circle")
                     .font(.headline)
             }
-            
-            Spacer()
+            }
+            .padding()
         }
-        .padding()
         .sheet(isPresented: $showLogs) {
             RealLogViewer()
         }

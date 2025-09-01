@@ -13,9 +13,11 @@ struct GeneralSettingsTab: View {
     @State private var showResetAllConfirmation = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 30) {
-            // Palette Window Settings
-            GroupBox {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 30) {
+                    // Palette Window Settings
+                    GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
                     LabeledContent("Position:") {
                         Picker("", selection: $settings.defaultPosition) {
@@ -74,9 +76,11 @@ struct GeneralSettingsTab: View {
                     .font(.headline)
             }
             
-            Spacer()
+                }
+                .padding()
+            }
             
-            // Reset Options
+            // Reset Options (fixed at bottom)
             HStack {
                 Spacer()
                 
@@ -86,8 +90,8 @@ struct GeneralSettingsTab: View {
                 .controlSize(.regular)
                 .buttonStyle(.bordered)
             }
+            .padding()
         }
-        .padding()
         .alert("Clear Saved Position", isPresented: $showResetConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Clear", role: .destructive) {

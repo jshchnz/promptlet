@@ -7,6 +7,7 @@
 
 import Cocoa
 import SwiftUI
+import Combine
 
 @MainActor
 class MenuBarController: NSObject {
@@ -14,6 +15,7 @@ class MenuBarController: NSObject {
     private weak var delegate: MenuBarDelegate?
     private weak var promptStore: PromptStore?
     private weak var appSettings: AppSettings?
+    private var cancellables = Set<AnyCancellable>()
     
     init(delegate: MenuBarDelegate, promptStore: PromptStore, appSettings: AppSettings) {
         self.delegate = delegate
@@ -35,6 +37,7 @@ class MenuBarController: NSObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.updateMenuBarVisibility()
+                self?.createMenu() // Refresh menu when settings change
             }
         }
         
@@ -48,6 +51,13 @@ class MenuBarController: NSObject {
                 self?.createMenu()
             }
         }
+        
+        // Observe prompt store changes to update menu when quick slots change
+        promptStore?.objectWillChange.sink { [weak self] _ in
+            Task { @MainActor in
+                self?.createMenu()
+            }
+        }.store(in: &cancellables)
     }
     
     private func updateMenuBarVisibility() {
@@ -100,6 +110,36 @@ class MenuBarController: NSObject {
         guard let statusItem = statusItem else { return }
         
         let menu = NSMenu()
+        
+        // Add quick slot items if enabled
+        if let settings = appSettings,
+           let store = promptStore,
+           settings.showQuickSlotsInMenuBar {
+            
+            let quickSlots = store.quickSlotPrompts
+            let slotsToShow = min(settings.menuBarQuickSlotCount, 5)
+            var addedQuickSlots = false
+            
+            for slot in 1...slotsToShow {
+                if let prompt = quickSlots[slot] {
+                    let shortcutKey = String(slot)
+                    let item = NSMenuItem(
+                        title: prompt.title,
+                        action: #selector(insertQuickSlotPrompt(_:)),
+                        keyEquivalent: shortcutKey
+                    )
+                    item.keyEquivalentModifierMask = [.command]
+                    item.representedObject = prompt.id
+                    item.target = self
+                    menu.addItem(item)
+                    addedQuickSlots = true
+                }
+            }
+            
+            if addedQuickSlots {
+                menu.addItem(NSMenuItem.separator())
+            }
+        }
         
         // Get the actual keyboard shortcut from settings
         let shortcutDisplay = appSettings?.getShortcut(for: .showPalette)?.displayString ?? "⌘⌥."
@@ -162,6 +202,11 @@ class MenuBarController: NSObject {
         delegate?.menuBarInsertRecentPrompt(promptId)
     }
     
+    @objc private func insertQuickSlotPrompt(_ sender: NSMenuItem) {
+        guard let promptId = sender.representedObject as? UUID else { return }
+        delegate?.menuBarInsertQuickSlotPrompt(promptId)
+    }
+    
     @objc private func openSettings() {
         // Delegate to AppDelegate to handle settings
         delegate?.menuBarOpenSettings()
@@ -207,6 +252,7 @@ protocol MenuBarDelegate: AnyObject {
     func menuBarShowPalette()
     func menuBarQuickAddFromClipboard()
     func menuBarInsertRecentPrompt(_ promptId: UUID)
+    func menuBarInsertQuickSlotPrompt(_ promptId: UUID)
     func menuBarOpenSettings()
     func menuBarResetWindowPosition()
 }

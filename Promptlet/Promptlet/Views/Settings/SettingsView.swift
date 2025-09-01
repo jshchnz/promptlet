@@ -9,34 +9,100 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
+    @State private var selectedTab = "general"
     
     var body: some View {
-        TabView {
-            GeneralSettingsTab(settings: settings)
-                .tabItem {
-                    Label("General", systemImage: "gearshape")
-                }
-                .tag(0)
+        VStack(spacing: 0) {
+            // macOS-style toolbar
+            HStack(spacing: 20) {
+                ToolbarButton(
+                    title: "General",
+                    icon: "gearshape",
+                    tag: "general",
+                    selection: $selectedTab
+                )
+                
+                ToolbarButton(
+                    title: "Keyboard",
+                    icon: "keyboard",
+                    tag: "keyboard",
+                    selection: $selectedTab
+                )
+                
+                ToolbarButton(
+                    title: "Appearance",
+                    icon: "paintbrush",
+                    tag: "appearance",
+                    selection: $selectedTab
+                )
+                
+                ToolbarButton(
+                    title: "Debug",
+                    icon: "hammer",
+                    tag: "debug",
+                    selection: $selectedTab
+                )
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color(NSColor.windowBackgroundColor))
             
-            KeyboardSettingsTab(settings: settings)
-                .tabItem {
-                    Label("Keyboard", systemImage: "keyboard")
-                }
-                .tag(1)
+            Divider()
             
-            AppearanceSettingsTab(settings: settings)
-                .tabItem {
-                    Label("Appearance", systemImage: "paintbrush")
+            // Content area
+            Group {
+                switch selectedTab {
+                case "general":
+                    GeneralSettingsTab(settings: settings)
+                case "keyboard":
+                    KeyboardSettingsTab(settings: settings)
+                case "appearance":
+                    AppearanceSettingsTab(settings: settings)
+                case "debug":
+                    DebugSettingsTab(settings: settings)
+                default:
+                    GeneralSettingsTab(settings: settings)
                 }
-                .tag(2)
-            
-            DebugSettingsTab(settings: settings)
-                .tabItem {
-                    Label("Debug", systemImage: "hammer")
-                }
-                .tag(3)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(NSColor.controlBackgroundColor))
         }
-        .frame(width: 680, height: 420)
+        .frame(width: 750, height: 550)
+    }
+}
+
+struct ToolbarButton: View {
+    let title: String
+    let icon: String
+    let tag: String
+    @Binding var selection: String
+    
+    var isSelected: Bool {
+        selection == tag
+    }
+    
+    var body: some View {
+        Button(action: {
+            selection = tag
+        }) {
+            VStack(spacing: 2) {
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundColor(isSelected ? .accentColor : .secondary)
+                
+                Text(title)
+                    .font(.system(size: 10))
+                    .foregroundColor(isSelected ? .primary : .secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.gray.opacity(0.2) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

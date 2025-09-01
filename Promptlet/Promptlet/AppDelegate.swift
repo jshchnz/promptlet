@@ -241,6 +241,15 @@ extension AppDelegate: MenuBarDelegate {
         insertPrompt(prompt)
     }
     
+    func menuBarInsertQuickSlotPrompt(_ promptId: UUID) {
+        guard let prompt = promptStore.prompts.first(where: { $0.id == promptId }) else {
+            return
+        }
+        
+        logInfo(.prompt, "Inserting quick slot prompt from menu: \(prompt.title)")
+        insertPrompt(prompt)
+    }
+    
     func menuBarOpenSettings() {
         windowManagementService.showSettingsWindow(with: appSettings)
     }
