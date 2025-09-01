@@ -98,7 +98,7 @@ class AppSettings: ObservableObject {
                     }
                 }
             } catch {
-                print("[AppSettings] Failed to decode shortcuts: \(error)")
+                logError(.settings, "Failed to decode shortcuts: \(error)")
                 shortcuts = KeyboardShortcut.defaultShortcuts
             }
         }
@@ -108,7 +108,7 @@ class AppSettings: ObservableObject {
         do {
             keyboardShortcutsData = try JSONEncoder().encode(shortcuts)
         } catch {
-            print("[AppSettings] Failed to encode shortcuts: \(error)")
+            logError(.settings, "Failed to encode shortcuts: \(error)")
         }
     }
     

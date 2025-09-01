@@ -14,45 +14,53 @@ extension Notification.Name {
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
+    // MARK: - Core Data & Controllers
     var promptStore: PromptStore!
     var paletteController: PaletteController!
-    let appSettings = AppSettings()  // Initialize immediately for Settings scene
-    var previousApp: NSRunningApplication?
+    let appSettings = AppSettings()
     
+    // MARK: - Controllers
     private var menuBarController: MenuBarController!
     private var keyboardController: KeyboardController!
     private var windowController: WindowController!
-    private var settingsWindow: NSWindow?
-    private var promptEditorWindow: NSWindow?
-    private var onboardingWindow: OnboardingWindow?
+    
+    // MARK: - Services
+    private var textInsertionService: TextInsertionService!
+    private var windowManagementService: WindowManagementService!
+    private var onboardingService: OnboardingService!
+    private var permissionService: PermissionManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("[AppDelegate] Application launched")
-        logInfo("AppDelegate", "Application launched")
+        logInfo(.app, "Application launched")
         
-        // Initialize core components immediately
+        // Initialize core components
         promptStore = PromptStore()
         paletteController = PaletteController(store: promptStore)
-        appSettings.applyTheme()  // Apply theme after app launches
+        appSettings.applyTheme()
         appSettings.incrementLaunchCount()
-        logInfo("AppDelegate", "Core components initialized")
+        logInfo(.app, "Core components initialized")
+        
+        // Initialize services
+        textInsertionService = TextInsertionService()
+        windowManagementService = WindowManagementService()
+        onboardingService = OnboardingService(settings: appSettings)
+        permissionService = PermissionManager.shared
+        logInfo(.app, "Services initialized")
         
         // Initialize controllers
         menuBarController = MenuBarController(delegate: self, promptStore: promptStore, appSettings: appSettings)
         keyboardController = KeyboardController(delegate: self, appSettings: appSettings)
         windowController = WindowController(delegate: self)
-        logInfo("AppDelegate", "Controllers initialized")
+        logInfo(.app, "Controllers initialized")
         
-        // Check if onboarding is needed
-        if !appSettings.hasCompletedOnboarding {
-            print("[AppDelegate] Showing onboarding")
-            logInfo("AppDelegate", "Showing onboarding - first launch detected")
-            showOnboardingWindow()
+        // Handle onboarding and permissions
+        if onboardingService.isOnboardingNeeded {
+            onboardingService.showOnboarding { [weak self] in
+                self?.setupPostOnboarding()
+            }
         } else {
-            // Only request permissions and setup if onboarding is complete
-            logInfo("AppDelegate", "Onboarding already completed, setting up permissions")
-            requestAccessibilityPermissions()
-            keyboardController.setupGlobalHotkey()
+            logInfo(.onboarding, "Onboarding already completed, setting up permissions")
+            setupPostOnboarding()
         }
         
         // Listen for shortcut changes
@@ -65,50 +73,54 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         NSApp.setActivationPolicy(.accessory)
         
-        // Listen for test notifications from onboarding
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleTestShowPalette),
-            name: Notification.Name("ShowPaletteTest"),
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleTestHidePalette),
-            name: Notification.Name("HidePaletteTest"),
-            object: nil
-        )
+        // Setup onboarding test notifications
+        onboardingService.handleTestNotifications()
+        setupTestNotificationHandlers()
         
-        print("[AppDelegate] Setup complete")
-        logSuccess("AppDelegate", "Application setup completed successfully")
+        logSuccess(.app, "Application setup completed successfully")
     }
     
-    private func requestAccessibilityPermissions() {
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-        let trusted = AXIsProcessTrustedWithOptions(options)
+    private func setupPostOnboarding() {
+        permissionService.requestAccessibilityPermissions()
+        keyboardController.setupGlobalHotkey()
         
-        if trusted {
-            print("[AppDelegate] Accessibility permissions granted")
-            logSuccess("Permissions", "Accessibility permissions granted")
-        } else {
-            print("[AppDelegate] Accessibility permissions not granted - requesting...")
-            logWarning("Permissions", "Accessibility permissions not granted - requesting user approval")
+        // Show the palette for the first time after onboarding
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.showPalette()
+        }
+    }
+    
+    private func setupTestNotificationHandlers() {
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("TestShowPalette"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.showPalette()
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("TestHidePalette"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.hidePalette()
         }
     }
     
     @objc func showPalette() {
         // Toggle palette visibility - only hide if it's actually frontmost
         if windowController.isPaletteFrontmost() {
-            print("[AppDelegate] Hiding palette (toggle)")
+            logDebug(.ui, "Hiding palette (toggle)")
             hidePalette()
             return
         }
         
-        print("[AppDelegate] Showing palette")
+        logDebug(.ui, "Showing palette")
         
         // Save the currently active app before showing palette
-        previousApp = NSWorkspace.shared.frontmostApplication
-        print("[AppDelegate] Saved previous app: \(previousApp?.localizedName ?? "none")")
+        let currentApp = NSWorkspace.shared.frontmostApplication
+        textInsertionService.setPreviousApp(currentApp)
         
         if !windowController.isPaletteVisible() {
             createPaletteWindow()
@@ -123,7 +135,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func createPaletteWindow() {
-        let paletteView = SimplePaletteView(
+        let paletteView = PaletteView(
             store: promptStore,
             controller: paletteController,
             appSettings: appSettings,
@@ -139,145 +151,50 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func hidePalette() {
-        print("[AppDelegate] Hiding palette")
+        logDebug(.ui, "Hiding palette")
         windowController.hidePalette()
         keyboardController.stopPaletteKeyboardMonitoring()
     }
     
     private func insertPrompt(_ prompt: Prompt) {
-        let content = prompt.renderedContent(with: [:])
-        
         // Hide palette first to release focus
         hidePalette()
         
-        // Save current clipboard
-        let previousClipboard = NSPasteboard.general.string(forType: .string)
-        
-        // Set prompt content to clipboard
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(content, forType: .string)
-        
-        // Restore focus to the original app
-        if let app = previousApp {
-            print("[AppDelegate] Restoring focus to: \(app.localizedName ?? "unknown")")
-            app.activate()
-            
-            // Wait for focus to restore, then paste
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.keyboardController.simulatePaste()
-                
-                // Restore previous clipboard after a delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if let previous = previousClipboard {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(previous, forType: .string)
-                    }
-                }
-                
-                print("[AppDelegate] Inserted prompt: \(prompt.title)")
-                logSuccess("TextInsertion", "Successfully inserted prompt: \(prompt.title)")
-            }
+        // Use service to handle text insertion
+        textInsertionService.insertPrompt(prompt) { [weak self] in
+            // Record usage and show feedback
+            self?.promptStore.recordUsage(for: prompt.id)
+            self?.menuBarController.showInsertedFeedback()
         }
-        
-        promptStore.recordUsage(for: prompt.id)
-        menuBarController.showInsertedFeedback()
     }
     
     private func showPromptEditor(for prompt: Prompt) {
-        print("[AppDelegate] Showing prompt editor for: \(prompt.title)")
-        
         // Hide palette if visible
         if windowController.isPaletteVisible() {
             hidePalette()
         }
         
-        // Create prompt editor view
-        let editorView = PromptEditorView(
-            prompt: prompt,
+        windowManagementService.showPromptEditor(
+            for: prompt,
             onSave: { [weak self] updatedPrompt in
                 self?.handlePromptSave(updatedPrompt)
             },
-            onCancel: { [weak self] in
-                self?.closePromptEditor()
-            }
+            onCancel: {}
         )
-        
-        let hostingView = NSHostingView(rootView: editorView)
-        
-        // Create or reuse window
-        if promptEditorWindow == nil {
-            let window = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 500, height: 550),
-                styleMask: [.titled, .closable, .resizable],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = "Edit Prompt"
-            window.isReleasedWhenClosed = false
-            window.level = .floating
-            window.center()
-            promptEditorWindow = window
-        }
-        
-        promptEditorWindow?.contentView = hostingView
-        promptEditorWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
     
     private func handlePromptSave(_ prompt: Prompt) {
-        // Update the prompt in the store
         promptStore.updatePrompt(prompt)
-        print("[AppDelegate] Updated prompt: \(prompt.title)")
-        closePromptEditor()
-    }
-    
-    private func closePromptEditor() {
-        promptEditorWindow?.close()
-        promptEditorWindow = nil
+        windowManagementService.closePromptEditor()
+        logInfo(.prompt, "Updated prompt: \(prompt.title)")
     }
     
     @objc private func shortcutsDidChange() {
-        print("[AppDelegate] Keyboard shortcuts changed, reloading...")
+        logInfo(.keyboard, "Keyboard shortcuts changed, reloading...")
         keyboardController.reloadShortcuts()
     }
     
-    private func showOnboardingWindow() {
-        if onboardingWindow == nil {
-            onboardingWindow = OnboardingWindow()
-        }
-        
-        let onboardingView = ModernOnboardingView(
-            settings: appSettings,
-            onComplete: { [weak self] in
-                self?.onboardingCompleted()
-            }
-        )
-        
-        onboardingWindow?.showOnboarding(with: onboardingView)
-    }
     
-    private func onboardingCompleted() {
-        print("[AppDelegate] Onboarding completed")
-        onboardingWindow?.close()
-        onboardingWindow = nil
-        
-        // Now setup permissions and keyboard shortcuts
-        requestAccessibilityPermissions()
-        keyboardController.setupGlobalHotkey()
-        
-        // Show the palette for the first time
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.showPalette()
-        }
-    }
-    
-    @objc private func handleTestShowPalette() {
-        showPalette()
-    }
-    
-    @objc private func handleTestHidePalette() {
-        hidePalette()
-    }
 }
 
 // MARK: - MenuBarDelegate
@@ -288,10 +205,10 @@ extension AppDelegate: MenuBarDelegate {
     }
     
     func menuBarQuickAddFromClipboard() {
-        print("[AppDelegate] Quick add from clipboard")
+        logInfo(.prompt, "Quick add from clipboard")
         
         guard let content = NSPasteboard.general.string(forType: .string) else {
-            print("[AppDelegate] No text in clipboard")
+            logWarning(.prompt, "No text in clipboard for quick add")
             return
         }
         
@@ -311,41 +228,18 @@ extension AppDelegate: MenuBarDelegate {
             return
         }
         
-        print("[AppDelegate] Inserting recent prompt: \(prompt.title)")
+        logInfo(.prompt, "Inserting recent prompt: \(prompt.title)")
         insertPrompt(prompt)
     }
     
     func menuBarOpenSettings() {
-        print("[AppDelegate] Opening settings")
-        
-        // Create and show settings window directly
-        if settingsWindow == nil {
-            let settingsView = SettingsView(settings: appSettings)
-            let hostingView = NSHostingView(rootView: settingsView)
-            
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 680, height: 420),
-                styleMask: [.titled, .closable, .miniaturizable],
-                backing: .buffered,
-                defer: false
-            )
-            
-            window.title = "Promptlet Settings"
-            window.contentView = hostingView
-            window.center()
-            window.isReleasedWhenClosed = false
-            
-            settingsWindow = window
-        }
-        
-        settingsWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        windowManagementService.showSettingsWindow(with: appSettings)
     }
     
     func menuBarResetWindowPosition() {
         appSettings.resetWindowPosition()
         menuBarController.showResetFeedback()
-        print("[AppDelegate] Reset window position")
+        logInfo(.window, "Reset window position")
     }
 }
 
@@ -375,7 +269,7 @@ extension AppDelegate: KeyboardControllerDelegate {
     }
     
     func keyboardNewPrompt() {
-        print("[AppDelegate] New prompt requested via Cmd+N")
+        logInfo(.keyboard, "New prompt requested via Cmd+N")
         
         // Get clipboard content if available
         let content = NSPasteboard.general.string(forType: .string) ?? ""

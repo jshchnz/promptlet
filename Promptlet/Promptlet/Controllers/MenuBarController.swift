@@ -80,7 +80,7 @@ class MenuBarController: NSObject {
         
         createMenu()
         
-        print("[MenuBarController] Menu bar setup complete")
+        logSuccess(.ui, "Menu bar setup complete")
     }
     
     func createMenu() {

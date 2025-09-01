@@ -138,30 +138,6 @@ class KeyboardController: NSObject {
         }
     }
     
-    func simulatePaste() {
-        // Use CGEvent to simulate Cmd+V
-        let source = CGEventSource(stateID: .hidSystemState)
-        
-        // Create keyboard events for Cmd+V
-        let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: true) // Cmd down
-        let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)   // V down
-        let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)    // V up
-        let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: false)  // Cmd up
-        
-        // Set the command flag
-        cmdDown?.flags = .maskCommand
-        vDown?.flags = .maskCommand
-        vUp?.flags = .maskCommand
-        cmdUp?.flags = .maskCommand
-        
-        // Post the events
-        cmdDown?.post(tap: .cghidEventTap)
-        vDown?.post(tap: .cghidEventTap)
-        vUp?.post(tap: .cghidEventTap)
-        cmdUp?.post(tap: .cghidEventTap)
-        
-        print("[KeyboardController] Pasted via keyboard simulation")
-    }
     
     func cleanup() {
         cleanupGlobalHotkey()

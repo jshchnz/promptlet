@@ -58,7 +58,7 @@ struct ModernOnboardingView: View {
                 }
             }
             .padding(50)
-            .frame(width: 680, height: 380)
+            .frame(width: 680, height: 390)
             .animation(.easeInOut(duration: 0.2), value: currentStep)
             
             // Footer - 80px with more padding
@@ -97,7 +97,7 @@ struct ModernOnboardingView: View {
             .padding(.horizontal, 70)
             .frame(height: 80)
         }
-        .frame(width: 680, height: 540)
+        .frame(width: 680, height: 550)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(NSColor.windowBackgroundColor))

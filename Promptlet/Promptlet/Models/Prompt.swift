@@ -49,7 +49,7 @@ struct Prompt: Identifiable, Codable, Hashable {
         self.usageCount = usageCount
         self.perAppEnhancements = perAppEnhancements
         
-        print("[Prompt] Created: \(title) with \(self.variables.count) variables")
+        logDebug(.prompt, "Created: \(title) with \(self.variables.count) variables")
     }
     
     var preview: String {
@@ -64,7 +64,7 @@ struct Prompt: Identifiable, Codable, Hashable {
             if let value = values[variable.name] ?? variable.lastValue {
                 let placeholder = "{{\(variable.name)}}"
                 result = result.replacingOccurrences(of: placeholder, with: value)
-                print("[Prompt] Replaced \(placeholder) with: \(value)")
+                logDebug(.prompt, "Replaced \(placeholder) with: \(value)")
             }
         }
         
@@ -91,7 +91,7 @@ struct Prompt: Identifiable, Codable, Hashable {
     mutating func recordUsage() {
         usageCount += 1
         lastUsedDate = Date()
-        print("[Prompt] Used: \(title), count: \(usageCount)")
+        logDebug(.prompt, "Used: \(title), count: \(usageCount)")
     }
     
     var frecencyScore: Double {

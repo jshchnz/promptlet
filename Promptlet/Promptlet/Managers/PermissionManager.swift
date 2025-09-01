@@ -9,7 +9,7 @@ import Foundation
 import AppKit
 
 @MainActor
-class PermissionManager: ObservableObject {
+class PermissionManager: ObservableObject, PermissionServiceProtocol {
     static let shared = PermissionManager()
     
     @Published var hasAccessibilityPermission = false
@@ -68,6 +68,42 @@ class PermissionManager: ObservableObject {
         // Apple Events permission will be requested automatically
         // when the app tries to send events to other apps
         hasAppleEventsPermission = true
+    }
+    
+    // MARK: - Protocol Conformance (PermissionServiceProtocol)
+    
+    var hasAccessibilityPermissions: Bool {
+        hasAccessibilityPermission
+    }
+    
+    func requestAccessibilityPermissions() {
+        _ = requestAccessibilityPermission()
+    }
+    
+    func checkPermissionStatus() -> PermissionStatus {
+        return permissionStatus
+    }
+    
+    func showPermissionInstructions() {
+        let alert = NSAlert()
+        alert.messageText = "Accessibility Permission Required"
+        alert.informativeText = """
+        Promptlet needs accessibility permission to:
+        • Insert text into other applications
+        • Detect the active application
+        • Position text at your cursor
+        
+        Please grant permission in System Preferences > Security & Privacy > Privacy > Accessibility
+        """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Open System Preferences")
+        alert.addButton(withTitle: "Later")
+        
+        let response = alert.runModal()
+        
+        if response == .alertFirstButtonReturn {
+            openAccessibilityPreferences()
+        }
     }
     
     // MARK: - Helper Methods

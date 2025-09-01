@@ -92,7 +92,7 @@ struct Enhancement: Codable, Hashable {
         self.headerLevel = headerLevel
         self.timestampFormat = timestampFormat
         
-        print("[Enhancement] Created with placement: \(placement.rawValue), transforms: \(transforms.map { $0.rawValue })")
+        logDebug(.prompt, "Enhancement created with placement: \(placement.rawValue), transforms: \(transforms.map { $0.rawValue })")
     }
     
     func apply(to content: String, with selection: String? = nil, existingContent: String = "") -> String {

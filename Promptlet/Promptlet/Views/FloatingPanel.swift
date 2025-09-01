@@ -1,13 +1,13 @@
 //
-//  PalettePanel.swift
+//  FloatingPanel.swift
 //  Promptlet
 //
-//  Created by Assistant on 8/30/25.
+//  Reusable floating panel for palette and other overlay windows
 //
 
 import Cocoa
 
-class PalettePanel: NSPanel {
+class FloatingPanel: NSPanel {
     
     init(contentRect: NSRect) {
         super.init(

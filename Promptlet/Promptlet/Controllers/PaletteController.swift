@@ -26,7 +26,7 @@ class PaletteController: ObservableObject {
         guard !prompts.isEmpty else { return }
         
         selectedIndex = max(0, selectedIndex - 1)
-        print("[PaletteController] Navigate up to: \(selectedIndex)")
+        logDebug(.ui, "Navigate up to: \(selectedIndex)")
     }
     
     func navigateDown() {
@@ -35,7 +35,7 @@ class PaletteController: ObservableObject {
         guard !prompts.isEmpty else { return }
         
         selectedIndex = min(prompts.count - 1, selectedIndex + 1)
-        print("[PaletteController] Navigate down to: \(selectedIndex)")
+        logDebug(.ui, "Navigate down to: \(selectedIndex)")
     }
     
     func selectPrompt(at index: Int) {

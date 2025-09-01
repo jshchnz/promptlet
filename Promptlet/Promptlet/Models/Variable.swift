@@ -53,7 +53,7 @@ struct Variable: Identifiable, Codable, Hashable {
         self.choices = choices
         self.rememberValue = rememberValue
         
-        print("[Variable] Created: \(name) of type \(type.rawValue)")
+        logDebug(.prompt, "Variable created: \(name) of type \(type.rawValue)")
     }
     
     static func extractVariables(from content: String) -> [Variable] {
@@ -91,7 +91,7 @@ struct Variable: Identifiable, Codable, Hashable {
                 )
                 variables.append(variable)
                 
-                print("[Variable] Extracted: \(name) with type \(variable.type.rawValue)")
+                logDebug(.prompt, "Variable extracted: \(name) with type \(variable.type.rawValue)")
             }
         }
         
@@ -102,7 +102,7 @@ struct Variable: Identifiable, Codable, Hashable {
                 if let range = Range(match.range, in: content) {
                     let token = String(content[range])
                     if !processedNames.contains(token) && token.count > 2 {
-                        print("[Variable] Found potential ALL_CAPS variable: \(token)")
+                        logDebug(.prompt, "Found potential ALL_CAPS variable: \(token)")
                     }
                 }
             }
@@ -115,7 +115,7 @@ struct Variable: Identifiable, Codable, Hashable {
                 if let range = Range(match.range(at: 1), in: content) {
                     let token = String(content[range])
                     if !processedNames.contains(token) && token.count > 2 {
-                        print("[Variable] Found potential [bracket] variable: \(token)")
+                        logDebug(.prompt, "Found potential [bracket] variable: \(token)")
                     }
                 }
             }
@@ -173,7 +173,7 @@ struct Variable: Identifiable, Codable, Hashable {
     mutating func updateLastValue(_ value: String) {
         if rememberValue {
             lastValue = value
-            print("[Variable] Updated last value for \(name): \(value)")
+            logDebug(.prompt, "Variable updated last value for \(name): \(value)")
         }
     }
 }

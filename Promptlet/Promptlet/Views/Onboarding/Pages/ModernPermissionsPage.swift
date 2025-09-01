@@ -117,7 +117,7 @@ struct ModernPermissionsPage: View {
                     }
                 )
             }
-            .frame(height: 150)
+            .frame(height: 160)
             .padding(.horizontal, 60)
             
             // Bottom section - Privacy note - 100px
@@ -246,7 +246,9 @@ struct ModernPermissionCard: View {
             Text(description)
                 .font(.system(size: 11))
                 .foregroundColor(.secondaryText)
-                .lineLimit(2)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
             
             // Example
             HStack(spacing: 4) {
@@ -307,7 +309,7 @@ struct ModernPermissionCard: View {
             .frame(height: 28)
         }
         .padding(16)
-        .frame(width: 230, height: 140)
+        .frame(width: 230, height: 150)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.secondaryBackground.opacity(0.5))

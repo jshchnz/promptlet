@@ -1,13 +1,13 @@
 //
-//  SimplePaletteView.swift
+//  PaletteView.swift
 //  Promptlet
 //
-//  Created by Josh Cohenzadeh on 8/29/25.
+//  Main command palette interface for searching and selecting prompts
 //
 
 import SwiftUI
 
-struct SimplePaletteView: View {
+struct PaletteView: View {
     @ObservedObject var store: PromptStore
     @ObservedObject var controller: PaletteController
     @ObservedObject var appSettings: AppSettings

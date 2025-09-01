@@ -9,6 +9,26 @@ import Foundation
 import SwiftUI
 import Combine
 
+enum PromptStoreError: LocalizedError {
+    case invalidData(String)
+    case decodingFailed(Error)
+    case encodingFailed(Error)
+    case noPromptsToExport
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidData(let message):
+            return "Invalid data: \(message)"
+        case .decodingFailed(let error):
+            return "Failed to decode data: \(error.localizedDescription)"
+        case .encodingFailed(let error):
+            return "Failed to encode data: \(error.localizedDescription)"
+        case .noPromptsToExport:
+            return "No prompts available to export"
+        }
+    }
+}
+
 @MainActor
 class PromptStore: ObservableObject {
     @Published var prompts: [Prompt] = []
@@ -71,12 +91,12 @@ class PromptStore: ObservableObject {
     }
     
     init() {
-        print("[PromptStore] Initializing...")
+        logDebug(.prompt, "Initializing store...")
         loadPrompts()
         loadPreferences()
         
         if prompts.isEmpty {
-            print("[PromptStore] No prompts found, loading defaults...")
+            logInfo(.prompt, "No prompts found, loading defaults...")
             prompts = Prompt.samplePrompts
             savePrompts()
         }
@@ -88,24 +108,48 @@ class PromptStore: ObservableObject {
             }
             .store(in: &cancellables)
         
-        print("[PromptStore] Initialized with \(prompts.count) prompts")
+        logSuccess(.prompt, "Store initialized with \(prompts.count) prompts")
     }
     
     func addPrompt(_ prompt: Prompt) {
-        print("[PromptStore] Adding prompt: \(prompt.title)")
+        guard !prompt.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            logError(.prompt, "Cannot add prompt with empty title")
+            return
+        }
+        
+        guard !prompts.contains(where: { $0.id == prompt.id }) else {
+            logWarning(.prompt, "Prompt with ID \(prompt.id) already exists")
+            return
+        }
+        
+        logInfo(.prompt, "Adding prompt: \(prompt.title)")
         prompts.append(prompt)
     }
     
     func updatePrompt(_ prompt: Prompt) {
-        if let index = prompts.firstIndex(where: { $0.id == prompt.id }) {
-            print("[PromptStore] Updating prompt: \(prompt.title)")
-            prompts[index] = prompt
+        guard let index = prompts.firstIndex(where: { $0.id == prompt.id }) else {
+            logError(.prompt, "Cannot update prompt: not found with ID \(prompt.id)")
+            return
         }
+        
+        guard !prompt.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            logError(.prompt, "Cannot update prompt with empty title")
+            return
+        }
+        
+        logInfo(.prompt, "Updating prompt: \(prompt.title)")
+        prompts[index] = prompt
     }
     
     func deletePrompt(_ prompt: Prompt) {
-        print("[PromptStore] Deleting prompt: \(prompt.title)")
+        let initialCount = prompts.count
         prompts.removeAll { $0.id == prompt.id }
+        
+        if prompts.count < initialCount {
+            logInfo(.prompt, "Deleted prompt: \(prompt.title)")
+        } else {
+            logWarning(.prompt, "No prompt found to delete with ID: \(prompt.id)")
+        }
     }
     
     func duplicatePrompt(_ prompt: Prompt) {
@@ -123,14 +167,17 @@ class PromptStore: ObservableObject {
             usageCount: 0,
             perAppEnhancements: prompt.perAppEnhancements
         )
-        print("[PromptStore] Duplicating prompt: \(prompt.title) -> \(newPrompt.title)")
+        logInfo(.prompt, "Duplicating prompt: \(prompt.title) -> \(newPrompt.title)")
         addPrompt(newPrompt)
     }
     
     func recordUsage(for promptId: UUID) {
-        if let index = prompts.firstIndex(where: { $0.id == promptId }) {
-            prompts[index].recordUsage()
+        guard let index = prompts.firstIndex(where: { $0.id == promptId }) else {
+            logWarning(.prompt, "Cannot record usage: prompt not found with ID \(promptId)")
+            return
         }
+        
+        prompts[index].recordUsage()
     }
     
     func getEnhancement(for prompt: Prompt) -> Enhancement {
@@ -144,41 +191,69 @@ class PromptStore: ObservableObject {
     func setAppEnhancement(for promptId: UUID, appId: String, enhancement: Enhancement) {
         if let index = prompts.firstIndex(where: { $0.id == promptId }) {
             prompts[index].perAppEnhancements[appId] = enhancement
-            print("[PromptStore] Set app-specific enhancement for \(prompts[index].title) in \(appId)")
+            logInfo(.prompt, "Set app-specific enhancement for \(prompts[index].title) in \(appId)")
         }
     }
     
     func importPrompts(from data: Data) throws {
+        guard !data.isEmpty else {
+            throw PromptStoreError.invalidData("Import data is empty")
+        }
+        
         let decoder = JSONDecoder()
-        let imported = try decoder.decode([Prompt].self, from: data)
-        print("[PromptStore] Importing \(imported.count) prompts...")
+        let imported: [Prompt]
+        
+        do {
+            imported = try decoder.decode([Prompt].self, from: data)
+        } catch {
+            logError(.prompt, "Failed to decode import data: \(error)")
+            throw PromptStoreError.decodingFailed(error)
+        }
+        
+        logInfo(.prompt, "Importing \(imported.count) prompts...")
+        var importedCount = 0
         
         for prompt in imported {
             if !prompts.contains(where: { $0.id == prompt.id }) {
                 addPrompt(prompt)
+                importedCount += 1
             }
         }
+        
+        logSuccess(.prompt, "Successfully imported \(importedCount) new prompts")
     }
     
     func exportPrompts() throws -> Data {
+        guard !prompts.isEmpty else {
+            throw PromptStoreError.noPromptsToExport
+        }
+        
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
-        print("[PromptStore] Exporting \(prompts.count) prompts...")
-        return try encoder.encode(prompts)
+        encoder.dateEncodingStrategy = .iso8601
+        
+        do {
+            let data = try encoder.encode(prompts)
+            logInfo(.prompt, "Exported \(prompts.count) prompts")
+            return data
+        } catch {
+            logError(.prompt, "Failed to export prompts: \(error)")
+            throw PromptStoreError.encodingFailed(error)
+        }
     }
     
     private func loadPrompts() {
         guard let data = UserDefaults.standard.data(forKey: saveKey) else {
-            print("[PromptStore] No saved prompts found")
+            logDebug(.prompt, "No saved prompts found")
             return
         }
         
         do {
             let decoder = JSONDecoder()
             prompts = try decoder.decode([Prompt].self, from: data)
-            print("[PromptStore] Loaded \(prompts.count) prompts from storage")
+            logInfo(.prompt, "Loaded \(prompts.count) prompts from storage")
         } catch {
-            print("[PromptStore] Failed to load prompts: \(error)")
+            logError(.prompt, "Failed to load prompts: \(error)")
         }
     }
     
@@ -187,9 +262,9 @@ class PromptStore: ObservableObject {
             let encoder = JSONEncoder()
             let data = try encoder.encode(prompts)
             UserDefaults.standard.set(data, forKey: saveKey)
-            print("[PromptStore] Saved \(prompts.count) prompts to storage")
+            logDebug(.prompt, "Saved \(prompts.count) prompts to storage")
         } catch {
-            print("[PromptStore] Failed to save prompts: \(error)")
+            logError(.prompt, "Failed to save prompts: \(error)")
         }
     }
     
@@ -200,12 +275,12 @@ class PromptStore: ObservableObject {
         }
         
         currentAppIdentifier = UserDefaults.standard.string(forKey: "\(preferencesKey).lastApp") ?? ""
-        print("[PromptStore] Loaded preferences - placement: \(selectedPlacement.rawValue), app: \(currentAppIdentifier)")
+        logDebug(.prompt, "Loaded preferences - placement: \(selectedPlacement.rawValue), app: \(currentAppIdentifier)")
     }
     
     func savePreferences() {
         UserDefaults.standard.set(selectedPlacement.rawValue, forKey: "\(preferencesKey).defaultPlacement")
         UserDefaults.standard.set(currentAppIdentifier, forKey: "\(preferencesKey).lastApp")
-        print("[PromptStore] Saved preferences")
+        logDebug(.prompt, "Saved preferences")
     }
 }

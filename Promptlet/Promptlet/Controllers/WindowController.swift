@@ -29,7 +29,7 @@ class WindowController: NSObject, NSWindowDelegate {
         hostingView.layerContentsRedrawPolicy = .onSetNeedsDisplay
         
         // Create custom palette panel
-        let window = PalettePanel(contentRect: NSRect(x: 0, y: 0, width: 500, height: 350))
+        let window = FloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 500, height: 350))
         
         window.contentView = hostingView
         window.delegate = self
@@ -41,7 +41,7 @@ class WindowController: NSObject, NSWindowDelegate {
         
         paletteWindow = window
         
-        print("[WindowController] Palette window created")
+        logSuccess(.window, "Palette window created")
     }
     
     func showPalette(appSettings: AppSettings) {
@@ -86,7 +86,7 @@ class WindowController: NSObject, NSWindowDelegate {
     }
     
     func hidePalette() {
-        print("[WindowController] Hiding palette")
+        logDebug(.window, "Hiding palette")
         guard let window = paletteWindow else { return }
         
         // Cancel any ongoing animation
@@ -141,15 +141,15 @@ class WindowController: NSObject, NSWindowDelegate {
     private func positionWindow(_ window: NSWindow, appSettings: AppSettings) {
         let position = appSettings.position
         
-        print("[WindowController] Position mode: \(position.rawValue)")
+        logDebug(.window, "Position mode: \(position.rawValue)")
         
         switch position {
         case .remember:
             if let savedPosition = loadSavedWindowPosition() {
                 window.setFrameOrigin(savedPosition)
-                print("[WindowController] Using saved window position: \(savedPosition)")
+                logDebug(.window, "Using saved window position: \(savedPosition)")
             } else {
-                print("[WindowController] No saved position found, using center")
+                logDebug(.window, "No saved position found, using center")
                 positionAtCenter(window)
             }
             
@@ -168,7 +168,7 @@ class WindowController: NSObject, NSWindowDelegate {
             let x = (screenFrame.width - windowSize.width) / 2 + screenFrame.origin.x
             let y = (screenFrame.height - windowSize.height) / 2 + screenFrame.origin.y
             window.setFrameOrigin(NSPoint(x: x, y: y))
-            print("[WindowController] Positioned at center")
+            logDebug(.window, "Positioned at center")
         }
     }
     
@@ -179,14 +179,14 @@ class WindowController: NSObject, NSWindowDelegate {
             let x = (screenFrame.width - windowSize.width) / 2 + screenFrame.origin.x
             let y = screenFrame.origin.y + screenFrame.height - (screenFrame.height * 0.3) - windowSize.height
             window.setFrameOrigin(NSPoint(x: x, y: y))
-            print("[WindowController] Positioned at top center")
+            logDebug(.window, "Positioned at top center")
         }
     }
     
     private func saveWindowPosition(_ position: NSPoint) {
         let positionString = NSStringFromPoint(position)
         UserDefaults.standard.set(positionString, forKey: "PaletteWindowPosition")
-        print("[WindowController] Saved window position: \(positionString)")
+        logDebug(.window, "Saved window position: \(positionString)")
     }
     
     private func loadSavedWindowPosition() -> NSPoint? {
@@ -194,7 +194,7 @@ class WindowController: NSObject, NSWindowDelegate {
             return nil
         }
         let position = NSPointFromString(positionString)
-        print("[WindowController] Loaded saved position: \(position)")
+        logDebug(.window, "Loaded saved position: \(position)")
         return position
     }
     
