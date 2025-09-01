@@ -191,7 +191,7 @@ struct KeyboardShortcut: Codable, Equatable, Identifiable {
     
     // Default shortcuts dictionary
     static let defaultShortcuts: [ShortcutAction: KeyboardShortcut] = [
-        .showPalette: KeyboardShortcut(keyCode: 47, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+.
+        .showPalette: KeyboardShortcut(keyCode: 47, modifierFlags: NSEvent.ModifierFlags.command.rawValue | NSEvent.ModifierFlags.option.rawValue), // Cmd+Option+.
         .navigateUp: KeyboardShortcut(keyCode: 126, modifierFlags: 0), // Up arrow
         .navigateDown: KeyboardShortcut(keyCode: 125, modifierFlags: 0), // Down arrow
         .closePalette: KeyboardShortcut(keyCode: 53, modifierFlags: 0), // Escape

@@ -37,6 +37,17 @@ class MenuBarController: NSObject {
                 self?.updateMenuBarVisibility()
             }
         }
+        
+        // Observe shortcut changes to update menu
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("shortcutsChanged"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.createMenu()
+            }
+        }
     }
     
     private func updateMenuBarVisibility() {
@@ -90,7 +101,9 @@ class MenuBarController: NSObject {
         
         let menu = NSMenu()
         
-        let openItem = NSMenuItem(title: "Open Palette (⌘. or ⌃⌘Space)", action: #selector(showPalette), keyEquivalent: ".")
+        // Get the actual keyboard shortcut from settings
+        let shortcutDisplay = appSettings?.getShortcut(for: .showPalette)?.displayString ?? "⌘⌥."
+        let openItem = NSMenuItem(title: "Open Palette (\(shortcutDisplay))", action: #selector(showPalette), keyEquivalent: "")
         openItem.target = self
         menu.addItem(openItem)
         menu.addItem(NSMenuItem.separator())

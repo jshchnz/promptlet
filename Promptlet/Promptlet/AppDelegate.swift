@@ -196,6 +196,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func shortcutsDidChange() {
         logInfo(.keyboard, "Keyboard shortcuts changed, reloading...")
         keyboardController.reloadShortcuts()
+        menuBarController.createMenu()
     }
     
     func applicationWillTerminate(_ notification: Notification) {
