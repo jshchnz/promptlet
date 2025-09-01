@@ -11,7 +11,7 @@ struct AppearanceSettingsTab: View {
     @ObservedObject var settings: AppSettings
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 30) {
             // Theme Settings
             GroupBox {
                 VStack(alignment: .leading, spacing: 16) {

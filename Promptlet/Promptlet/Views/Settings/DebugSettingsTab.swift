@@ -13,7 +13,7 @@ struct DebugSettingsTab: View {
     @State private var showResetOnboardingConfirmation = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 30) {
             // Developer Options
             GroupBox {
                 VStack(alignment: .leading, spacing: 12) {

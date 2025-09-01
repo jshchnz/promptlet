@@ -13,7 +13,7 @@ struct GeneralSettingsTab: View {
     @State private var showResetAllConfirmation = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 30) {
             // Palette Window Settings
             GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
