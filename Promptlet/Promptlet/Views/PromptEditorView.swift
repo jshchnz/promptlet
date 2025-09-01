@@ -112,7 +112,7 @@ struct PromptEditorView: View {
             .padding(15)
         }
         .frame(width: 500, height: 550)
-        .background(VisualEffectView())
+        .background(VisualEffectBackground(material: .popover, state: .followsWindowActiveState))
         .onAppear {
             isTitleFocused = true
         }

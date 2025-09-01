@@ -26,14 +26,16 @@ class MenuBarController: NSObject {
     
     private func observeSettings() {
         // Observe changes to showMenuBarIcon setting
-        guard let settings = appSettings else { return }
+        guard appSettings != nil else { return }
         
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.updateMenuBarVisibility()
+            Task { @MainActor in
+                self?.updateMenuBarVisibility()
+            }
         }
     }
     

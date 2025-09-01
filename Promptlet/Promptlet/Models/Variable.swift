@@ -68,60 +68,45 @@ struct Variable: Identifiable, Codable, Hashable {
         let matches = regex.matches(in: content, options: [], range: NSRange(content.startIndex..., in: content))
         
         for match in matches {
-            if let nameRange = Range(match.range(at: 1), in: content) {
-                let name = String(content[nameRange])
-                
-                guard !processedNames.contains(name) else { continue }
-                processedNames.insert(name)
-                
-                let type = determineType(for: name)
-                guard !isBuiltIn(name) else { continue }
-                
-                var choices: [String]? = nil
-                if match.numberOfRanges > 2,
-                   let choicesRange = Range(match.range(at: 2), in: content) {
-                    let choicesString = String(content[choicesRange])
-                    choices = choicesString.split(separator: "|").map { String($0.trimmingCharacters(in: .whitespaces)) }
-                }
-                
-                let variable = Variable(
-                    name: name,
-                    type: choices != nil ? .choice : type,
-                    choices: choices
-                )
+            if let variable = extractVariable(from: match, in: content, processedNames: &processedNames) {
                 variables.append(variable)
-                
-                logDebug(.prompt, "Variable extracted: \(name) with type \(variable.type.rawValue)")
-            }
-        }
-        
-        let allCapsPattern = #"\b[A-Z_]+\b"#
-        if let allCapsRegex = try? NSRegularExpression(pattern: allCapsPattern, options: []) {
-            let allCapsMatches = allCapsRegex.matches(in: content, options: [], range: NSRange(content.startIndex..., in: content))
-            for match in allCapsMatches {
-                if let range = Range(match.range, in: content) {
-                    let token = String(content[range])
-                    if !processedNames.contains(token) && token.count > 2 {
-                        logDebug(.prompt, "Found potential ALL_CAPS variable: \(token)")
-                    }
-                }
-            }
-        }
-        
-        let bracketPattern = #"\[([^\]]+)\]"#
-        if let bracketRegex = try? NSRegularExpression(pattern: bracketPattern, options: []) {
-            let bracketMatches = bracketRegex.matches(in: content, options: [], range: NSRange(content.startIndex..., in: content))
-            for match in bracketMatches {
-                if let range = Range(match.range(at: 1), in: content) {
-                    let token = String(content[range])
-                    if !processedNames.contains(token) && token.count > 2 {
-                        logDebug(.prompt, "Found potential [bracket] variable: \(token)")
-                    }
-                }
             }
         }
         
         return variables
+    }
+    
+    private static func extractVariable(from match: NSTextCheckingResult, in content: String, processedNames: inout Set<String>) -> Variable? {
+        guard let nameRange = Range(match.range(at: 1), in: content) else { return nil }
+        
+        let name = String(content[nameRange])
+        
+        guard !processedNames.contains(name) else { return nil }
+        processedNames.insert(name)
+        
+        guard !isBuiltIn(name) else { return nil }
+        
+        let choices = extractChoices(from: match, in: content)
+        let type = choices != nil ? .choice : determineType(for: name)
+        
+        let variable = Variable(
+            name: name,
+            type: type,
+            choices: choices
+        )
+        
+        logDebug(.prompt, "Variable extracted: \(name) with type \(variable.type.rawValue)")
+        return variable
+    }
+    
+    private static func extractChoices(from match: NSTextCheckingResult, in content: String) -> [String]? {
+        guard match.numberOfRanges > 2,
+              let choicesRange = Range(match.range(at: 2), in: content) else {
+            return nil
+        }
+        
+        let choicesString = String(content[choicesRange])
+        return choicesString.split(separator: "|").map { String($0.trimmingCharacters(in: .whitespaces)) }
     }
     
     private static func determineType(for name: String) -> VariableType {

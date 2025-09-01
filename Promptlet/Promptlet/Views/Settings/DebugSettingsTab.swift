@@ -11,7 +11,6 @@ struct DebugSettingsTab: View {
     @ObservedObject var settings: AppSettings
     @State private var showLogs = false
     @State private var showResetOnboardingConfirmation = false
-    @State private var debugOutput = ""
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -89,7 +88,7 @@ struct DebugSettingsTab: View {
                     
                     LabeledContent("Permissions:") {
                         VStack(alignment: .trailing, spacing: 4) {
-                            PermissionStatusView(name: "Accessibility", isGranted: checkAccessibilityPermission())
+                            PermissionStatusView(name: "Accessibility", isGranted: PermissionManager.shared.hasAccessibilityPermission)
                             PermissionStatusView(name: "Apple Events", isGranted: true) // Simplified for now
                         }
                     }
@@ -115,11 +114,6 @@ struct DebugSettingsTab: View {
         } message: {
             Text("The onboarding flow will be shown again on next app launch.")
         }
-    }
-    
-    private func checkAccessibilityPermission() -> Bool {
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
-        return AXIsProcessTrustedWithOptions(options)
     }
     
     private func exportDebugInfo() {

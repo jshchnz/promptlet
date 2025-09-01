@@ -96,7 +96,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.showPalette()
+            Task { @MainActor in
+                self?.showPalette()
+            }
         }
         
         NotificationCenter.default.addObserver(
@@ -104,7 +106,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.hidePalette()
+            Task { @MainActor in
+                self?.hidePalette()
+            }
         }
     }
     
@@ -194,7 +198,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         keyboardController.reloadShortcuts()
     }
     
-    
+    func applicationWillTerminate(_ notification: Notification) {
+        logInfo(.app, "Application terminating, cleaning up resources")
+        keyboardController.cleanup()
+        NotificationCenter.default.removeObserver(self)
+    }
 }
 
 // MARK: - MenuBarDelegate

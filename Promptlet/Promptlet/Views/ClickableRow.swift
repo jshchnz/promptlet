@@ -1,5 +1,5 @@
 //
-//  DoubleClickableRow.swift
+//  ClickableRow.swift
 //  Promptlet
 //
 //  Created by Assistant on 8/30/25.
@@ -8,7 +8,7 @@
 import SwiftUI
 import AppKit
 
-struct DoubleClickableRow: NSViewRepresentable {
+struct ClickableRow: NSViewRepresentable {
     let onSingleClick: () -> Void
     let onDoubleClick: () -> Void
     

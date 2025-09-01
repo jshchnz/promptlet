@@ -53,7 +53,7 @@ struct PaletteView: View {
                                 isSelected: index == controller.selectedIndex
                             )
                             .background(
-                                DoubleClickableRow(
+                                ClickableRow(
                                     onSingleClick: {
                                         controller.selectPrompt(at: index)
                                     },
@@ -111,7 +111,7 @@ struct PaletteView: View {
             .padding(8)
         }
         .frame(width: 500, height: 350)
-        .background(VisualEffectView())
+        .background(VisualEffectBackground(material: .popover, state: .followsWindowActiveState))
         .cornerRadius(10)
         .shadow(color: Color.black.opacity(0.2), radius: 15, x: 0, y: 5)
         .onAppear {
@@ -164,19 +164,3 @@ struct SimplePromptRow: View {
     }
 }
 
-struct VisualEffectView: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        // Use popover material for better blur effect like Spotlight
-        view.material = .popover
-        view.blendingMode = .behindWindow
-        view.state = .followsWindowActiveState
-        view.wantsLayer = true
-        return view
-    }
-    
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        // Update state if needed
-        nsView.state = .followsWindowActiveState
-    }
-}
