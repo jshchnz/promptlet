@@ -155,7 +155,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func hidePalette() {
         logDebug(.ui, "Hiding palette")
-        windowController.hidePalette()
+        windowController.hidePalette(animated: appSettings.enableAnimations)
         keyboardController.stopPaletteKeyboardMonitoring()
     }
     

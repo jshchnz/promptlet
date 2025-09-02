@@ -38,6 +38,13 @@ struct SettingsView: View {
                 )
                 
                 ToolbarButton(
+                    title: "Organization",
+                    icon: "folder",
+                    tag: "organization",
+                    selection: $selectedTab
+                )
+                
+                ToolbarButton(
                     title: "Quick Slots",
                     icon: "rectangle.grid.3x3",
                     tag: "quickslots",
@@ -67,6 +74,8 @@ struct SettingsView: View {
                     KeyboardSettingsTab(settings: settings)
                 case "appearance":
                     AppearanceSettingsTab(settings: settings)
+                case "organization":
+                    OrganizationSettingsTab(settings: settings, promptStore: promptStore)
                 case "quickslots":
                     QuickSlotsSettingsTab(settings: settings, promptStore: promptStore)
                 case "debug":
@@ -106,7 +115,7 @@ struct ToolbarButton: View {
                     .font(.system(size: 10))
                     .foregroundColor(isSelected ? .primary : .secondary)
             }
-            .frame(width: 60, height: 50)
+            .frame(width: 80, height: 50)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

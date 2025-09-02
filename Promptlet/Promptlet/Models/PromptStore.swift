@@ -32,6 +32,7 @@ enum PromptStoreError: LocalizedError {
 @MainActor
 class PromptStore: ObservableObject {
     @Published var prompts: [Prompt] = []
+    @Published var categories: [String] = ["Work", "Personal", "Templates"]
     @Published var searchText: String = ""
     @Published var selectedPlacement: PlacementMode = .cursor
     @Published var currentAppIdentifier: String = ""
@@ -41,35 +42,45 @@ class PromptStore: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     var filteredPrompts: [Prompt] {
+        var filtered = prompts.filter { !$0.isArchived }  // Hide archived prompts from palette
+        
         if searchText.isEmpty {
-            return sortedPrompts
+            return filtered.sorted { $0.frecencyScore > $1.frecencyScore }
         }
         
         let searchLower = searchText.lowercased()
         
         if searchText.hasPrefix("#") {
             let tag = String(searchText.dropFirst()).lowercased()
-            return sortedPrompts.filter { prompt in
+            filtered = filtered.filter { prompt in
                 prompt.tags.contains { $0.lowercased().contains(tag) }
             }
-        }
-        
-        if searchText.hasPrefix("mode:") {
+        } else if searchText.hasPrefix("mode:") {
             let mode = String(searchText.dropFirst(5)).lowercased()
-            return sortedPrompts.filter { prompt in
+            filtered = filtered.filter { prompt in
                 prompt.defaultEnhancement.placement.rawValue.lowercased().contains(mode)
+            }
+        } else if searchText.hasPrefix("category:") {
+            let category = String(searchText.dropFirst(9)).lowercased()
+            filtered = filtered.filter { prompt in
+                if category == "uncategorized" || category == "none" {
+                    return prompt.category == nil
+                }
+                return prompt.category?.lowercased().contains(category) ?? false
+            }
+        } else {
+            filtered = filtered.filter { prompt in
+                prompt.title.lowercased().contains(searchLower) ||
+                prompt.content.lowercased().contains(searchLower) ||
+                prompt.tags.contains { $0.lowercased().contains(searchLower) }
             }
         }
         
-        return sortedPrompts.filter { prompt in
-            prompt.title.lowercased().contains(searchLower) ||
-            prompt.content.lowercased().contains(searchLower) ||
-            prompt.tags.contains { $0.lowercased().contains(searchLower) }
-        }
+        return filtered.sorted { $0.frecencyScore > $1.frecencyScore }
     }
     
     var sortedPrompts: [Prompt] {
-        prompts.sorted { $0.frecencyScore > $1.frecencyScore }
+        prompts.filter { !$0.isArchived }.sorted { $0.frecencyScore > $1.frecencyScore }
     }
     
     var favoritePrompts: [Prompt] {
@@ -94,6 +105,7 @@ class PromptStore: ObservableObject {
         logDebug(.prompt, "Initializing store...")
         loadPrompts()
         loadPreferences()
+        loadCategories()
         
         if prompts.isEmpty {
             logInfo(.prompt, "No prompts found, loading defaults...")
@@ -158,9 +170,11 @@ class PromptStore: ObservableObject {
             title: "\(prompt.title) Copy",
             content: prompt.content,
             tags: prompt.tags,
+            category: prompt.category,
             defaultEnhancement: prompt.defaultEnhancement,
             variables: prompt.variables,
             isFavorite: false,
+            isArchived: false,
             quickSlot: nil,
             createdDate: Date(),
             lastUsedDate: Date(),
@@ -282,5 +296,77 @@ class PromptStore: ObservableObject {
         UserDefaults.standard.set(selectedPlacement.rawValue, forKey: "\(preferencesKey).defaultPlacement")
         UserDefaults.standard.set(currentAppIdentifier, forKey: "\(preferencesKey).lastApp")
         logDebug(.prompt, "Saved preferences")
+    }
+    
+    // MARK: - Category Management
+    
+    func addCategory(_ category: String) {
+        let trimmed = category.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty && !categories.contains(trimmed) else { return }
+        categories.append(trimmed)
+        saveCategories()
+    }
+    
+    func removeCategory(_ category: String) {
+        categories.removeAll { $0 == category }
+        // Reset prompts in this category to uncategorized
+        for (index, prompt) in prompts.enumerated() where prompt.category == category {
+            prompts[index].category = nil
+        }
+        saveCategories()
+    }
+    
+    func renameCategory(from oldName: String, to newName: String) {
+        guard let index = categories.firstIndex(of: oldName) else { return }
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty && !categories.contains(trimmed) else { return }
+        
+        categories[index] = trimmed
+        // Update prompts with this category
+        for (index, prompt) in prompts.enumerated() where prompt.category == oldName {
+            prompts[index].category = trimmed
+        }
+        saveCategories()
+    }
+    
+    func promptsInCategory(_ category: String?) -> [Prompt] {
+        if category == nil {
+            return prompts.filter { $0.category == nil && !$0.isArchived }
+        }
+        return prompts.filter { $0.category == category && !$0.isArchived }
+    }
+    
+    func movePrompts(_ promptIds: Set<UUID>, toCategory category: String?) {
+        for id in promptIds {
+            if let index = prompts.firstIndex(where: { $0.id == id }) {
+                prompts[index].category = category
+            }
+        }
+    }
+    
+    func archivePrompts(_ promptIds: Set<UUID>) {
+        for id in promptIds {
+            if let index = prompts.firstIndex(where: { $0.id == id }) {
+                prompts[index].isArchived = true
+            }
+        }
+    }
+    
+    func unarchivePrompts(_ promptIds: Set<UUID>) {
+        for id in promptIds {
+            if let index = prompts.firstIndex(where: { $0.id == id }) {
+                prompts[index].isArchived = false
+            }
+        }
+    }
+    
+    private func saveCategories() {
+        UserDefaults.standard.set(categories, forKey: "\(saveKey).categories")
+    }
+    
+    private func loadCategories() {
+        if let saved = UserDefaults.standard.array(forKey: "\(saveKey).categories") as? [String] {
+            categories = saved
+        }
     }
 }

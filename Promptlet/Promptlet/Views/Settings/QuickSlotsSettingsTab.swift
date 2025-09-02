@@ -52,7 +52,7 @@ struct QuickSlotsSettingsTab: View {
                 // Keyboard Shortcuts Section
                 GroupBox {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Configure keyboard shortcuts for quick slots")
+                        Text("Configure keyboard shortcuts for quick slots (all use Command ⌘ modifier by default)")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                             .padding(.bottom, 12)
@@ -346,7 +346,7 @@ extension ShortcutAction {
         switch self {
         case .quickSlot1, .quickSlot2, .quickSlot3, .quickSlot4, .quickSlot5,
              .quickSlot6, .quickSlot7, .quickSlot8, .quickSlot9:
-            return "Instantly insert this quick slot prompt"
+            return "Press Command + number to instantly insert this prompt"
         default:
             return ""
         }

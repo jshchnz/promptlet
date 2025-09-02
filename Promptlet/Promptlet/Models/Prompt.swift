@@ -13,9 +13,11 @@ struct Prompt: Identifiable, Codable, Hashable {
     var title: String
     var content: String
     var tags: Set<String>
+    var category: String?
     var defaultEnhancement: Enhancement
     var variables: [Variable]
     var isFavorite: Bool
+    var isArchived: Bool
     var quickSlot: Int?
     var createdDate: Date
     var lastUsedDate: Date
@@ -27,9 +29,11 @@ struct Prompt: Identifiable, Codable, Hashable {
         title: String,
         content: String,
         tags: Set<String> = [],
+        category: String? = nil,
         defaultEnhancement: Enhancement = Enhancement(),
         variables: [Variable] = [],
         isFavorite: Bool = false,
+        isArchived: Bool = false,
         quickSlot: Int? = nil,
         createdDate: Date = Date(),
         lastUsedDate: Date = Date(),
@@ -40,9 +44,11 @@ struct Prompt: Identifiable, Codable, Hashable {
         self.title = title
         self.content = content
         self.tags = tags
+        self.category = category
         self.defaultEnhancement = defaultEnhancement
         self.variables = Variable.extractVariables(from: content)
         self.isFavorite = isFavorite
+        self.isArchived = isArchived
         self.quickSlot = quickSlot
         self.createdDate = createdDate
         self.lastUsedDate = lastUsedDate

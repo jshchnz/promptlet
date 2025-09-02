@@ -60,32 +60,38 @@ class WindowController: NSObject, NSWindowDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         
-        // Set initial scale if window is hidden
-        if window.alphaValue < 0.1 {
-            window.contentView?.layer?.transform = CATransform3DMakeScale(0.96, 0.96, 1.0)
-        }
-        
-        // Animate fade in with scale effect
-        NSAnimationContext.runAnimationGroup({ [weak self] context in
-            context.duration = 0.15
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            context.allowsImplicitAnimation = true
-            
-            self?.currentAnimationContext = context
-            
-            // Scale and fade in
-            window.animator().alphaValue = 1.0
-            
-            // Animate to full scale
-            if let contentView = window.contentView {
-                contentView.layer?.transform = CATransform3DIdentity
+        if appSettings.enableAnimations {
+            // Set initial scale if window is hidden
+            if window.alphaValue < 0.1 {
+                window.contentView?.layer?.transform = CATransform3DMakeScale(0.96, 0.96, 1.0)
             }
-        }, completionHandler: { [weak self] in
-            self?.currentAnimationContext = nil
-        })
+            
+            // Animate fade in with scale effect
+            NSAnimationContext.runAnimationGroup({ [weak self] context in
+                context.duration = 0.15
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                context.allowsImplicitAnimation = true
+                
+                self?.currentAnimationContext = context
+                
+                // Scale and fade in
+                window.animator().alphaValue = 1.0
+                
+                // Animate to full scale
+                if let contentView = window.contentView {
+                    contentView.layer?.transform = CATransform3DIdentity
+                }
+            }, completionHandler: { [weak self] in
+                self?.currentAnimationContext = nil
+            })
+        } else {
+            // No animation - just show immediately
+            window.alphaValue = 1.0
+            window.contentView?.layer?.transform = CATransform3DIdentity
+        }
     }
     
-    func hidePalette() {
+    func hidePalette(animated: Bool = true) {
         logDebug(.window, "Hiding palette")
         guard let window = paletteWindow else { return }
         
@@ -93,25 +99,31 @@ class WindowController: NSObject, NSWindowDelegate {
         currentAnimationContext?.completionHandler = nil
         currentAnimationContext = nil
         
-        // Animate fade out
-        NSAnimationContext.runAnimationGroup({ [weak self] context in
-            context.duration = 0.10
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            context.allowsImplicitAnimation = true
-            
-            self?.currentAnimationContext = context
-            
-            // Fade out and slightly scale down
-            window.animator().alphaValue = 0
-            
-            if let contentView = window.contentView {
-                contentView.layer?.transform = CATransform3DMakeScale(0.96, 0.96, 1.0)
-            }
-        }, completionHandler: { [weak self] in
-            self?.currentAnimationContext = nil
-            // Hide window after animation
+        if animated {
+            // Animate fade out
+            NSAnimationContext.runAnimationGroup({ [weak self] context in
+                context.duration = 0.10
+                context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                context.allowsImplicitAnimation = true
+                
+                self?.currentAnimationContext = context
+                
+                // Fade out and slightly scale down
+                window.animator().alphaValue = 0
+                
+                if let contentView = window.contentView {
+                    contentView.layer?.transform = CATransform3DMakeScale(0.96, 0.96, 1.0)
+                }
+            }, completionHandler: { [weak self] in
+                self?.currentAnimationContext = nil
+                // Hide window after animation
+                window.orderOut(nil)
+            })
+        } else {
+            // No animation - just hide immediately
+            window.alphaValue = 0
             window.orderOut(nil)
-        })
+        }
     }
     
     func isPaletteVisible() -> Bool {
