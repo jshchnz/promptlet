@@ -12,7 +12,7 @@ struct AppearanceSettingsTab: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
+            VStack(alignment: .leading, spacing: 24) {
                 // Theme Settings
                 GroupBox {
                 VStack(alignment: .leading, spacing: 16) {
@@ -30,11 +30,10 @@ struct AppearanceSettingsTab: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
-                .padding(4)
             } label: {
                 Label("Theme", systemImage: "circle.lefthalf.filled")
-                    .font(.headline)
             }
+            .groupBoxStyle(SettingsGroupBoxStyle())
             
             // Visual Effects
             GroupBox {
@@ -53,13 +52,13 @@ struct AppearanceSettingsTab: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
-                .padding(4)
             } label: {
                 Label("Visual Effects", systemImage: "sparkles")
-                    .font(.headline)
             }
+            .groupBoxStyle(SettingsGroupBoxStyle())
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
         }
     }
 }

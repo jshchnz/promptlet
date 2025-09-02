@@ -15,42 +15,41 @@ struct GeneralSettingsTab: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 30) {
+                VStack(alignment: .leading, spacing: 24) {
                     // Palette Window Settings
                     GroupBox {
-                VStack(alignment: .leading, spacing: 12) {
-                    LabeledContent("Position:") {
-                        Picker("", selection: $settings.defaultPosition) {
-                            ForEach(DefaultPosition.allCases, id: \.rawValue) { position in
-                                Text(position.rawValue).tag(position.rawValue)
+                        VStack(alignment: .leading, spacing: 12) {
+                            LabeledContent("Position:") {
+                                Picker("", selection: $settings.defaultPosition) {
+                                    ForEach(DefaultPosition.allCases, id: \.rawValue) { position in
+                                        Text(position.rawValue).tag(position.rawValue)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(width: 200)
                             }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 200)
-                    }
-                    
-                    Text("Choose where the palette window appears when opened")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                    
-                    if settings.savedWindowPosition != nil {
-                        HStack {
-                            Text("Custom position saved")
+                            
+                            Text("Choose where the palette window appears when opened")
                                 .font(.footnote)
                                 .foregroundColor(.secondary)
                             
-                            Button("Clear") {
-                                showResetConfirmation = true
+                            if settings.savedWindowPosition != nil {
+                                HStack {
+                                    Text("Custom position saved")
+                                        .font(.footnote)
+                                        .foregroundColor(.secondary)
+                                    
+                                    Button("Clear") {
+                                        showResetConfirmation = true
+                                    }
+                                    .controlSize(.small)
+                                }
                             }
-                            .controlSize(.small)
                         }
+                    } label: {
+                        Label("Palette Window", systemImage: "rectangle.stack")
                     }
-                }
-                .padding(4)
-            } label: {
-                Label("Palette Window", systemImage: "rectangle.stack")
-                    .font(.headline)
-            }
+                    .groupBoxStyle(SettingsGroupBoxStyle())
             
             // App Information
             GroupBox {
@@ -70,14 +69,14 @@ struct GeneralSettingsTab: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .padding(4)
             } label: {
                 Label("App Information", systemImage: "info.circle")
-                    .font(.headline)
             }
+            .groupBoxStyle(SettingsGroupBoxStyle())
             
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 20)
             }
             
             // Reset Options (fixed at bottom)

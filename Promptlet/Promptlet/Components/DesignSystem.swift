@@ -117,3 +117,24 @@ extension AnyTransition {
         )
     }
 }
+
+// MARK: - Settings GroupBox Style
+struct SettingsGroupBoxStyle: GroupBoxStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            configuration.label
+                .font(.headline)
+                .padding(.bottom, 16)  // More space below header
+            
+            configuration.content
+                .padding(.leading, 8)  // Indent content slightly from label
+        }
+        .padding(.top, 16)
+        .padding(.bottom, 16)
+        .padding(.leading, 8)  // Minimal left padding - icon almost at edge
+        .padding(.trailing, 16)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        .cornerRadius(8)
+        .padding(.bottom, 20)  // Space between GroupBoxes
+    }
+}

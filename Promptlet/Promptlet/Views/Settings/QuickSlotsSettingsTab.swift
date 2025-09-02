@@ -21,7 +21,7 @@ struct QuickSlotsSettingsTab: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
+            VStack(alignment: .leading, spacing: 24) {
                 // Prompt Assignment Section
                 GroupBox {
                     VStack(alignment: .leading, spacing: 16) {
@@ -44,11 +44,10 @@ struct QuickSlotsSettingsTab: View {
                             }
                         }
                     }
-                    .padding(4)
                 } label: {
                     Label("Prompt Assignment", systemImage: "rectangle.grid.3x3")
-                        .font(.headline)
                 }
+                .groupBoxStyle(SettingsGroupBoxStyle())
                 
                 // Keyboard Shortcuts Section
                 GroupBox {
@@ -67,11 +66,10 @@ struct QuickSlotsSettingsTab: View {
                             )
                         }
                     }
-                    .padding(4)
                 } label: {
                     Label("Keyboard Shortcuts", systemImage: "keyboard")
-                        .font(.headline)
                 }
+                .groupBoxStyle(SettingsGroupBoxStyle())
                 
                 // Menu Bar Settings Section
                 GroupBox {
@@ -92,13 +90,13 @@ struct QuickSlotsSettingsTab: View {
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
-                    .padding(4)
                 } label: {
                     Label("Menu Bar", systemImage: "menubar.rectangle")
-                        .font(.headline)
                 }
+                .groupBoxStyle(SettingsGroupBoxStyle())
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
         }
     }
 }

@@ -14,7 +14,7 @@ struct DebugSettingsTab: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
+            VStack(alignment: .leading, spacing: 24) {
                 // Developer Options
                 GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
@@ -48,11 +48,10 @@ struct DebugSettingsTab: View {
                         }
                     }
                 }
-                .padding(4)
             } label: {
                 Label("Developer Options", systemImage: "hammer")
-                    .font(.headline)
             }
+            .groupBoxStyle(SettingsGroupBoxStyle())
             
             // Onboarding Reset
             GroupBox {
@@ -66,11 +65,10 @@ struct DebugSettingsTab: View {
                     }
                     .buttonStyle(.bordered)
                 }
-                .padding(4)
             } label: {
                 Label("Testing", systemImage: "arrow.clockwise")
-                    .font(.headline)
             }
+            .groupBoxStyle(SettingsGroupBoxStyle())
             
             // System Info
             GroupBox {
@@ -94,13 +92,13 @@ struct DebugSettingsTab: View {
                         }
                     }
                 }
-                .padding(4)
             } label: {
                 Label("System Information", systemImage: "info.circle")
-                    .font(.headline)
             }
+            .groupBoxStyle(SettingsGroupBoxStyle())
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
         }
         .sheet(isPresented: $showLogs) {
             RealLogViewer()
