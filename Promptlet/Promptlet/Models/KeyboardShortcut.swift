@@ -197,15 +197,15 @@ struct KeyboardShortcut: Codable, Equatable, Identifiable {
         .closePalette: KeyboardShortcut(keyCode: 53, modifierFlags: 0), // Escape
         .insertPrompt: KeyboardShortcut(keyCode: 36, modifierFlags: 0), // Return
         .newPrompt: KeyboardShortcut(keyCode: 45, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+N
-        .quickSlot1: KeyboardShortcut(keyCode: 18, modifierFlags: 0), // 1
-        .quickSlot2: KeyboardShortcut(keyCode: 19, modifierFlags: 0), // 2
-        .quickSlot3: KeyboardShortcut(keyCode: 20, modifierFlags: 0), // 3
-        .quickSlot4: KeyboardShortcut(keyCode: 21, modifierFlags: 0), // 4
-        .quickSlot5: KeyboardShortcut(keyCode: 23, modifierFlags: 0), // 5
-        .quickSlot6: KeyboardShortcut(keyCode: 22, modifierFlags: 0), // 6
-        .quickSlot7: KeyboardShortcut(keyCode: 26, modifierFlags: 0), // 7
-        .quickSlot8: KeyboardShortcut(keyCode: 28, modifierFlags: 0), // 8
-        .quickSlot9: KeyboardShortcut(keyCode: 25, modifierFlags: 0), // 9
+        .quickSlot1: KeyboardShortcut(keyCode: 18, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+1
+        .quickSlot2: KeyboardShortcut(keyCode: 19, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+2
+        .quickSlot3: KeyboardShortcut(keyCode: 20, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+3
+        .quickSlot4: KeyboardShortcut(keyCode: 21, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+4
+        .quickSlot5: KeyboardShortcut(keyCode: 23, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+5
+        .quickSlot6: KeyboardShortcut(keyCode: 22, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+6
+        .quickSlot7: KeyboardShortcut(keyCode: 26, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+7
+        .quickSlot8: KeyboardShortcut(keyCode: 28, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+8
+        .quickSlot9: KeyboardShortcut(keyCode: 25, modifierFlags: NSEvent.ModifierFlags.command.rawValue), // Cmd+9
     ]
     
     // Validate shortcut based on action requirements
