@@ -53,7 +53,7 @@ class MenuBarController: NSObject {
         }
         
         // Observe prompt store changes to update menu when quick slots change
-        promptStore?.objectWillChange.sink { [weak self] _ in
+        promptStore?.$prompts.sink { [weak self] _ in
             Task { @MainActor in
                 self?.createMenu()
             }
