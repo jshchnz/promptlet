@@ -15,7 +15,7 @@ extension Notification.Name {
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Core Data & Controllers
-    var promptStore: PromptStore!
+    var promptStore: PromptStore = PromptStore()
     var paletteController: PaletteController!
     let appSettings = AppSettings()
     
@@ -34,7 +34,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         logInfo(.app, "Application launched")
         
         // Initialize core components
-        promptStore = PromptStore()
         paletteController = PaletteController(store: promptStore)
         appSettings.applyTheme()
         appSettings.incrementLaunchCount()
@@ -251,7 +250,7 @@ extension AppDelegate: MenuBarDelegate {
     }
     
     func menuBarOpenSettings() {
-        windowManagementService.showSettingsWindow(with: appSettings)
+        windowManagementService.showSettingsWindow(with: appSettings, promptStore: promptStore)
     }
     
     func menuBarResetWindowPosition() {

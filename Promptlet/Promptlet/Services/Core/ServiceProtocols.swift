@@ -28,8 +28,10 @@ protocol TextInsertionServiceProtocol {
 @MainActor
 protocol WindowManagementServiceProtocol {
     /// Shows the settings window
-    /// - Parameter settings: The app settings object
-    func showSettingsWindow(with settings: AppSettings)
+    /// - Parameters:
+    ///   - settings: The app settings object
+    ///   - promptStore: The prompt store for managing prompts
+    func showSettingsWindow(with settings: AppSettings, promptStore: PromptStore)
     
     /// Shows the prompt editor window
     /// - Parameters:

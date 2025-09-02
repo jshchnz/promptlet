@@ -16,8 +16,7 @@ struct KeyboardSettingsTab: View {
     let categories = [
         ("Global", "globe", [ShortcutAction.showPalette]),
         ("Navigation", "arrow.up.arrow.down", [ShortcutAction.navigateUp, .navigateDown, .closePalette]),
-        ("Actions", "command", [ShortcutAction.insertPrompt, .newPrompt]),
-        ("Quick Slots", "number.square", [ShortcutAction.quickSlot1, .quickSlot2, .quickSlot3, .quickSlot4, .quickSlot5, .quickSlot6, .quickSlot7, .quickSlot8, .quickSlot9])
+        ("Actions", "command", [ShortcutAction.insertPrompt, .newPrompt])
     ]
     
     var body: some View {
@@ -166,8 +165,8 @@ struct ShortcutRow: View {
             return "Inserts the selected prompt"
         case .newPrompt:
             return "Creates a new prompt"
-        case .quickSlot1, .quickSlot2, .quickSlot3, .quickSlot4, .quickSlot5, .quickSlot6, .quickSlot7, .quickSlot8, .quickSlot9:
-            return "Instantly insert this quick slot prompt"
+        default:
+            return ""
         }
     }
 }

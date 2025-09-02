@@ -58,31 +58,6 @@ struct AppearanceSettingsTab: View {
                 Label("Visual Effects", systemImage: "sparkles")
                     .font(.headline)
             }
-            
-            // Quick Slots in Menu Bar
-            GroupBox {
-                VStack(alignment: .leading, spacing: 16) {
-                    Toggle("Show quick slots in menu bar", isOn: $settings.showQuickSlotsInMenuBar)
-                        .disabled(!settings.showMenuBarIcon)
-                    
-                    HStack {
-                        Text("Number of slots to show:")
-                        Stepper(value: $settings.menuBarQuickSlotCount, in: 1...5) {
-                            Text("\(settings.menuBarQuickSlotCount)")
-                                .frame(width: 30)
-                        }
-                        .disabled(!settings.showMenuBarIcon || !settings.showQuickSlotsInMenuBar)
-                    }
-                    
-                    Text("Display your first 1-5 quick slot prompts directly in the menu bar for instant access")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                }
-                .padding(4)
-            } label: {
-                Label("Quick Slots", systemImage: "keyboard")
-                    .font(.headline)
-            }
             }
             .padding()
         }
