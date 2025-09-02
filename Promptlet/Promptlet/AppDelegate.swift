@@ -147,6 +147,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onDismiss: { [weak self] in
                 self?.hidePalette()
+            },
+            onNewPrompt: { [weak self] in
+                self?.keyboardNewPrompt()
             }
         )
         
@@ -171,25 +174,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    private func showPromptEditor(for prompt: Prompt) {
+    private func showPromptEditor(for prompt: Prompt, isNew: Bool = false) {
         // Hide palette if visible
         if windowController.isPaletteVisible() {
             hidePalette()
         }
         
+        logInfo(.prompt, isNew ? "Opening editor for new prompt" : "Opening editor for existing prompt: \(prompt.title)")
+        
         windowManagementService.showPromptEditor(
             for: prompt,
             onSave: { [weak self] updatedPrompt in
-                self?.handlePromptSave(updatedPrompt)
+                if isNew {
+                    self?.promptStore.addPrompt(updatedPrompt)
+                    logSuccess(.prompt, "New prompt created and saved: \(updatedPrompt.title)")
+                } else {
+                    self?.promptStore.updatePrompt(updatedPrompt)
+                    logInfo(.prompt, "Existing prompt updated: \(updatedPrompt.title)")
+                }
+                self?.windowManagementService.closePromptEditor()
             },
-            onCancel: {}
+            onCancel: {
+                if isNew {
+                    logInfo(.prompt, "New prompt creation cancelled - no prompt saved")
+                } else {
+                    logInfo(.prompt, "Edit cancelled for prompt: \(prompt.title)")
+                }
+            }
         )
-    }
-    
-    private func handlePromptSave(_ prompt: Prompt) {
-        promptStore.updatePrompt(prompt)
-        windowManagementService.closePromptEditor()
-        logInfo(.prompt, "Updated prompt: \(prompt.title)")
     }
     
     @objc private func shortcutsDidChange() {
@@ -213,7 +225,7 @@ extension AppDelegate: MenuBarDelegate {
     }
     
     func menuBarQuickAddFromClipboard() {
-        logInfo(.prompt, "Quick add from clipboard")
+        logInfo(.prompt, "Quick add from clipboard initiated")
         
         guard let content = NSPasteboard.general.string(forType: .string) else {
             logWarning(.prompt, "No text in clipboard for quick add")
@@ -227,8 +239,8 @@ extension AppDelegate: MenuBarDelegate {
             defaultEnhancement: Enhancement()
         )
         
-        promptStore.addPrompt(prompt)
-        showPromptEditor(for: prompt)
+        // Don't add to store yet - wait for user to save
+        showPromptEditor(for: prompt, isNew: true)
     }
     
     func menuBarInsertRecentPrompt(_ promptId: UUID) {
@@ -286,7 +298,7 @@ extension AppDelegate: KeyboardControllerDelegate {
     }
     
     func keyboardNewPrompt() {
-        logInfo(.keyboard, "New prompt requested via Cmd+N")
+        logInfo(.keyboard, "New prompt creation initiated")
         
         // Get clipboard content if available
         let content = NSPasteboard.general.string(forType: .string) ?? ""
@@ -298,8 +310,8 @@ extension AppDelegate: KeyboardControllerDelegate {
             defaultEnhancement: Enhancement()
         )
         
-        promptStore.addPrompt(prompt)
-        showPromptEditor(for: prompt)
+        // Don't add to store yet - wait for user to save
+        showPromptEditor(for: prompt, isNew: true)
     }
     
     func isPaletteVisible() -> Bool {

@@ -9,6 +9,25 @@ import Foundation
 import SwiftUI
 import Combine
 
+enum PaletteSortMode: String, CaseIterable {
+    case smart = "smart"     // Sort by frecency (frequency + recency)
+    case manual = "manual"   // Sort by user-defined displayOrder
+    
+    var displayName: String {
+        switch self {
+        case .smart: return "Smart"
+        case .manual: return "Manual"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .smart: return "sparkles"
+        case .manual: return "list.number"
+        }
+    }
+}
+
 enum PromptStoreError: LocalizedError {
     case invalidData(String)
     case decodingFailed(Error)
@@ -36,6 +55,7 @@ class PromptStore: ObservableObject {
     @Published var searchText: String = ""
     @Published var selectedPlacement: PlacementMode = .cursor
     @Published var currentAppIdentifier: String = ""
+    @Published var paletteSortMode: PaletteSortMode = .smart
     
     private let saveKey = "com.promptlet.prompts"
     private let preferencesKey = "com.promptlet.preferences"
@@ -45,7 +65,13 @@ class PromptStore: ObservableObject {
         var filtered = prompts.filter { !$0.isArchived }  // Hide archived prompts from palette
         
         if searchText.isEmpty {
-            return filtered.sorted { $0.frecencyScore > $1.frecencyScore }
+            // When not searching, use the selected sort mode
+            switch paletteSortMode {
+            case .smart:
+                return filtered.sorted { $0.frecencyScore > $1.frecencyScore }
+            case .manual:
+                return filtered.sorted { $0.displayOrder < $1.displayOrder }
+            }
         }
         
         let searchLower = searchText.lowercased()
@@ -134,8 +160,12 @@ class PromptStore: ObservableObject {
             return
         }
         
-        logInfo(.prompt, "Adding prompt: \(prompt.title)")
-        prompts.append(prompt)
+        var newPrompt = prompt
+        // Assign next available displayOrder
+        newPrompt.displayOrder = (prompts.map { $0.displayOrder }.max() ?? -1) + 1
+        
+        logInfo(.prompt, "Adding prompt: \(newPrompt.title)")
+        prompts.append(newPrompt)
     }
     
     func updatePrompt(_ prompt: Prompt) {
@@ -179,7 +209,8 @@ class PromptStore: ObservableObject {
             createdDate: Date(),
             lastUsedDate: Date(),
             usageCount: 0,
-            perAppEnhancements: prompt.perAppEnhancements
+            perAppEnhancements: prompt.perAppEnhancements,
+            displayOrder: 0  // Will be assigned in addPrompt
         )
         logInfo(.prompt, "Duplicating prompt: \(prompt.title) -> \(newPrompt.title)")
         addPrompt(newPrompt)
@@ -265,6 +296,21 @@ class PromptStore: ObservableObject {
         do {
             let decoder = JSONDecoder()
             prompts = try decoder.decode([Prompt].self, from: data)
+            
+            // Ensure all prompts have a displayOrder (for backward compatibility)
+            var needsNormalization = false
+            for (index, prompt) in prompts.enumerated() {
+                if prompt.displayOrder == 0 && prompts.filter({ $0.displayOrder == 0 }).count == prompts.count {
+                    // All have displayOrder 0, need to assign sequential values
+                    prompts[index].displayOrder = index
+                    needsNormalization = true
+                }
+            }
+            
+            if needsNormalization {
+                savePrompts()
+            }
+            
             logInfo(.prompt, "Loaded \(prompts.count) prompts from storage")
         } catch {
             logError(.prompt, "Failed to load prompts: \(error)")
@@ -289,12 +335,19 @@ class PromptStore: ObservableObject {
         }
         
         currentAppIdentifier = UserDefaults.standard.string(forKey: "\(preferencesKey).lastApp") ?? ""
-        logDebug(.prompt, "Loaded preferences - placement: \(selectedPlacement.rawValue), app: \(currentAppIdentifier)")
+        
+        if let sortMode = UserDefaults.standard.string(forKey: "\(preferencesKey).paletteSortMode"),
+           let mode = PaletteSortMode(rawValue: sortMode) {
+            paletteSortMode = mode
+        }
+        
+        logDebug(.prompt, "Loaded preferences - placement: \(selectedPlacement.rawValue), app: \(currentAppIdentifier), sort: \(paletteSortMode.rawValue)")
     }
     
     func savePreferences() {
         UserDefaults.standard.set(selectedPlacement.rawValue, forKey: "\(preferencesKey).defaultPlacement")
         UserDefaults.standard.set(currentAppIdentifier, forKey: "\(preferencesKey).lastApp")
+        UserDefaults.standard.set(paletteSortMode.rawValue, forKey: "\(preferencesKey).paletteSortMode")
         logDebug(.prompt, "Saved preferences")
     }
     
@@ -330,10 +383,13 @@ class PromptStore: ObservableObject {
     }
     
     func promptsInCategory(_ category: String?) -> [Prompt] {
+        let filtered: [Prompt]
         if category == nil {
-            return prompts.filter { $0.category == nil && !$0.isArchived }
+            filtered = prompts.filter { $0.category == nil && !$0.isArchived }
+        } else {
+            filtered = prompts.filter { $0.category == category && !$0.isArchived }
         }
-        return prompts.filter { $0.category == category && !$0.isArchived }
+        return filtered.sorted { $0.displayOrder < $1.displayOrder }
     }
     
     func movePrompts(_ promptIds: Set<UUID>, toCategory category: String?) {
@@ -367,6 +423,69 @@ class PromptStore: ObservableObject {
     private func loadCategories() {
         if let saved = UserDefaults.standard.array(forKey: "\(saveKey).categories") as? [String] {
             categories = saved
+        }
+    }
+    
+    // MARK: - Debug/Reset Functions
+    
+    func resetToDefaultPrompts() {
+        logWarning(.prompt, "Resetting prompts to defaults")
+        prompts = Prompt.samplePrompts
+        categories = ["Work", "Personal", "Templates"]
+        savePrompts()
+        saveCategories()
+        logSuccess(.prompt, "Reset to \(prompts.count) default prompts")
+    }
+    
+    func clearAllPrompts() {
+        logWarning(.prompt, "Clearing all prompts")
+        prompts = []
+        savePrompts()
+        logSuccess(.prompt, "All prompts cleared")
+    }
+    
+    // MARK: - Reordering Functions
+    
+    func reorderPrompts(from sourceIndices: IndexSet, to destination: Int, inCategory category: String? = nil) {
+        var targetPrompts: [Prompt]
+        
+        if let category = category {
+            // Filter to prompts in the specified category
+            if category == "Uncategorized" {
+                targetPrompts = prompts.filter { $0.category == nil }
+            } else {
+                targetPrompts = prompts.filter { $0.category == category }
+            }
+        } else {
+            targetPrompts = prompts
+        }
+        
+        // Sort by current displayOrder
+        targetPrompts.sort { $0.displayOrder < $1.displayOrder }
+        
+        // Perform the move in the filtered array
+        targetPrompts.move(fromOffsets: sourceIndices, toOffset: destination)
+        
+        // Update displayOrder for all affected prompts
+        for (index, prompt) in targetPrompts.enumerated() {
+            if let globalIndex = prompts.firstIndex(where: { $0.id == prompt.id }) {
+                prompts[globalIndex].displayOrder = index
+            }
+        }
+        
+        // Re-normalize displayOrder for all prompts to avoid gaps
+        normalizeDisplayOrder()
+        
+        logInfo(.prompt, "Reordered prompts")
+    }
+    
+    private func normalizeDisplayOrder() {
+        // Sort all prompts by current displayOrder and reassign sequential values
+        let sorted = prompts.sorted { $0.displayOrder < $1.displayOrder }
+        for (index, prompt) in sorted.enumerated() {
+            if let globalIndex = prompts.firstIndex(where: { $0.id == prompt.id }) {
+                prompts[globalIndex].displayOrder = index
+            }
         }
     }
 }

@@ -13,7 +13,22 @@ struct PaletteView: View {
     @ObservedObject var appSettings: AppSettings
     let onInsert: (Prompt) -> Void
     let onDismiss: () -> Void
+    let onNewPrompt: (() -> Void)?
     @FocusState private var isSearchFocused: Bool
+    
+    init(store: PromptStore,
+         controller: PaletteController,
+         appSettings: AppSettings,
+         onInsert: @escaping (Prompt) -> Void,
+         onDismiss: @escaping () -> Void,
+         onNewPrompt: (() -> Void)? = nil) {
+        self.store = store
+        self.controller = controller
+        self.appSettings = appSettings
+        self.onInsert = onInsert
+        self.onDismiss = onDismiss
+        self.onNewPrompt = onNewPrompt
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -38,40 +53,121 @@ struct PaletteView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                
+                Divider()
+                    .frame(height: 16)
+                
+                // Sort mode toggle
+                Button(action: {
+                    store.paletteSortMode = store.paletteSortMode == .smart ? .manual : .smart
+                    store.savePreferences()
+                }) {
+                    Image(systemName: store.paletteSortMode.icon)
+                        .foregroundColor(store.paletteSortMode == .manual ? .accentColor : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Sort mode: \(store.paletteSortMode.displayName) - Click to toggle between Smart (frecency) and Manual ordering")
             }
             .padding(12)
             
             Divider()
             
-            // Prompt list
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 1) {
-                        ForEach(Array(store.filteredPrompts.enumerated()), id: \.element.id) { index, prompt in
-                            SimplePromptRow(
-                                prompt: prompt,
-                                isSelected: index == controller.selectedIndex
-                            )
-                            .background(
-                                ClickableRow(
-                                    onSingleClick: {
-                                        controller.selectPrompt(at: index)
-                                    },
-                                    onDoubleClick: {
-                                        onInsert(prompt)
-                                    }
-                                )
-                            )
-                            .id(prompt.id)
+            // Content area - either prompt list or empty state
+            if store.filteredPrompts.isEmpty {
+                // Empty state
+                VStack(spacing: 20) {
+                    Spacer()
+                    
+                    if store.prompts.isEmpty {
+                        // No prompts exist at all
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        
+                        Text("No Prompts Yet")
+                            .font(.headline)
+                        
+                        Text("Create your first prompt to get started")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        if let onNewPrompt = onNewPrompt {
+                            Button("Create New Prompt") {
+                                onNewPrompt()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.regular)
+                            
+                            if let shortcut = appSettings.getShortcut(for: .newPrompt) {
+                                Text("or press \(shortcut.displayString)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    } else if !store.searchText.isEmpty {
+                        // Search returned no results
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        
+                        Text("No Results")
+                            .font(.headline)
+                        
+                        Text("No prompts match \"\(store.searchText)\"")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        
+                        Button("Clear Search") {
+                            store.searchText = ""
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
+                        
+                        if onNewPrompt != nil,
+                           let shortcut = appSettings.getShortcut(for: .newPrompt) {
+                            Text("Press \(shortcut.displayString) to create a new prompt")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
                     }
-                    .padding(4)
+                    
+                    Spacer()
                 }
-                .onChange(of: controller.selectedIndex) { _, newIndex in
-                    if newIndex < store.filteredPrompts.count {
-                        let prompt = store.filteredPrompts[newIndex]
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            proxy.scrollTo(prompt.id, anchor: .center)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // Prompt list
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 1) {
+                            ForEach(Array(store.filteredPrompts.enumerated()), id: \.element.id) { index, prompt in
+                                SimplePromptRow(
+                                    prompt: prompt,
+                                    isSelected: index == controller.selectedIndex
+                                )
+                                .background(
+                                    ClickableRow(
+                                        onSingleClick: {
+                                            controller.selectPrompt(at: index)
+                                        },
+                                        onDoubleClick: {
+                                            onInsert(prompt)
+                                        }
+                                    )
+                                )
+                                .id(prompt.id)
+                            }
+                        }
+                        .padding(4)
+                    }
+                    .onChange(of: controller.selectedIndex) { _, newIndex in
+                        if newIndex < store.filteredPrompts.count {
+                            let prompt = store.filteredPrompts[newIndex]
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                proxy.scrollTo(prompt.id, anchor: .center)
+                            }
                         }
                     }
                 }
@@ -133,10 +229,12 @@ struct SimplePromptRow: View {
                     .foregroundColor(isSelected ? .white : .primary)
                 
                 if !prompt.content.isEmpty {
-                    Text(prompt.content.prefix(50))
+                    Text(prompt.content)
                         .font(.system(size: 11))
                         .foregroundColor(isSelected ? Color.white.opacity(0.8) : .secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             

@@ -9,8 +9,11 @@ import SwiftUI
 
 struct DebugSettingsTab: View {
     @ObservedObject var settings: AppSettings
+    @ObservedObject var promptStore: PromptStore
     @State private var showLogs = false
     @State private var showResetOnboardingConfirmation = false
+    @State private var showResetPromptsConfirmation = false
+    @State private var showClearPromptsConfirmation = false
     
     var body: some View {
         ScrollView {
@@ -70,6 +73,35 @@ struct DebugSettingsTab: View {
             }
             .groupBoxStyle(SettingsGroupBoxStyle())
             
+            // Prompt Management
+            GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Manage your prompt library for testing")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    
+                    HStack {
+                        Button("Reset to Default Prompts") {
+                            showResetPromptsConfirmation = true
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Button("Clear All Prompts") {
+                            showClearPromptsConfirmation = true
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.red)
+                    }
+                    
+                    Text("Current prompts: \(promptStore.prompts.count)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            } label: {
+                Label("Prompt Management", systemImage: "text.badge.xmark")
+            }
+            .groupBoxStyle(SettingsGroupBoxStyle())
+            
             // System Info
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
@@ -111,6 +143,22 @@ struct DebugSettingsTab: View {
             }
         } message: {
             Text("The onboarding flow will be shown again on next app launch.")
+        }
+        .alert("Reset to Default Prompts", isPresented: $showResetPromptsConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reset", role: .destructive) {
+                promptStore.resetToDefaultPrompts()
+            }
+        } message: {
+            Text("This will replace all current prompts with the default sample prompts. Your custom prompts will be lost.")
+        }
+        .alert("Clear All Prompts", isPresented: $showClearPromptsConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear All", role: .destructive) {
+                promptStore.clearAllPrompts()
+            }
+        } message: {
+            Text("This will permanently delete all prompts. This action cannot be undone.")
         }
     }
     

@@ -23,6 +23,7 @@ struct Prompt: Identifiable, Codable, Hashable {
     var lastUsedDate: Date
     var usageCount: Int
     var perAppEnhancements: [String: Enhancement]
+    var displayOrder: Int
     
     init(
         id: UUID = UUID(),
@@ -38,7 +39,8 @@ struct Prompt: Identifiable, Codable, Hashable {
         createdDate: Date = Date(),
         lastUsedDate: Date = Date(),
         usageCount: Int = 0,
-        perAppEnhancements: [String: Enhancement] = [:]
+        perAppEnhancements: [String: Enhancement] = [:],
+        displayOrder: Int = 0
     ) {
         self.id = id
         self.title = title
@@ -54,6 +56,7 @@ struct Prompt: Identifiable, Codable, Hashable {
         self.lastUsedDate = lastUsedDate
         self.usageCount = usageCount
         self.perAppEnhancements = perAppEnhancements
+        self.displayOrder = displayOrder
         
         logDebug(.prompt, "Created: \(title) with \(self.variables.count) variables")
     }
@@ -111,79 +114,83 @@ struct Prompt: Identifiable, Codable, Hashable {
 
 extension Prompt {
     static let samplePrompts: [Prompt] = [
-        // Simple prompts without variables (most common use case)
+        // Claude Code optimized prompt enhancements
         Prompt(
             title: "Ultrathink",
-            content: "Ultrathink about this",
-            tags: ["thinking", "ai"],
-            defaultEnhancement: Enhancement(placement: .cursor)
+            content: "Ultrathink.",
+            tags: ["deep-thinking", "claude-code"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 0
         ),
         Prompt(
-            title: "TODO",
-            content: "TODO: ",
-            tags: ["code", "task"],
-            defaultEnhancement: Enhancement(placement: .cursor)
+            title: "Step-by-Step",
+            content: "Think step-by-step through this problem.",
+            tags: ["reasoning", "systematic"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 1
         ),
         Prompt(
-            title: "FIXED",
-            content: "FIXED: ",
-            tags: ["code", "task"],
-            defaultEnhancement: Enhancement(placement: .cursor)
+            title: "Deep Analysis",
+            content: "Think harder about this. What am I missing?",
+            tags: ["analysis", "deep-thinking"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 2
         ),
         Prompt(
-            title: "Comment",
-            content: "// ",
-            tags: ["code"],
-            defaultEnhancement: Enhancement(placement: .cursor)
+            title: "Systematic Debug",
+            content: "Debug this systematically. Find the root cause, not just symptoms.",
+            tags: ["debugging", "troubleshooting"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 3
         ),
         Prompt(
-            title: "Note",
-            content: "NOTE: ",
-            tags: ["documentation"],
-            defaultEnhancement: Enhancement(placement: .cursor)
+            title: "Senior Review",
+            content: "Review this code as a senior engineer would. Be critical but constructive.",
+            tags: ["code-review", "quality"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 4
         ),
         Prompt(
-            title: "Important",
-            content: "⚠️ IMPORTANT: ",
-            tags: ["documentation", "warning"],
-            defaultEnhancement: Enhancement(placement: .cursor)
+            title: "Edge Cases",
+            content: "What edge cases, failure modes, and corner cases should I consider?",
+            tags: ["testing", "risk-analysis"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 5
         ),
         Prompt(
-            title: "Question",
-            content: "❓ Question: ",
-            tags: ["review"],
-            defaultEnhancement: Enhancement(placement: .cursor)
+            title: "Explain First",
+            content: "First explain your reasoning and approach, then implement the solution.",
+            tags: ["planning", "documentation"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 6
         ),
         Prompt(
-            title: "Divider",
-            content: "---",
-            tags: ["markdown"],
-            defaultEnhancement: Enhancement(placement: .cursor, newlineAfter: true, newlineBefore: true)
-        ),
-        // More complex prompts with variables
-        Prompt(
-            title: "Meeting Notes Header",
-            content: "## Meeting Notes - {{date}}\n**Attendees:** {{attendees}}\n**Topic:** {{topic}}\n\n### Agenda\n- \n\n### Action Items\n- ",
-            tags: ["meeting", "notes"],
-            defaultEnhancement: Enhancement(placement: .top, newlineAfter: true, blankLineAfter: true)
+            title: "Performance Focus",
+            content: "Analyze performance bottlenecks. Profile first, then optimize strategically.",
+            tags: ["performance", "optimization"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 7
         ),
         Prompt(
-            title: "PR Template",
-            content: "## Summary\n{{summary}}\n\n## Changes\n- \n\n## Testing\n- [ ] Unit tests pass\n- [ ] Manual testing complete\n\n## Screenshots\n_If applicable_",
-            tags: ["github", "pr"],
-            defaultEnhancement: Enhancement(placement: .cursor)
+            title: "Security Audit",
+            content: "Security audit: Find vulnerabilities, attack vectors, and potential exploits.",
+            tags: ["security", "audit"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 8
         ),
         Prompt(
-            title: "Code Fence",
-            content: "```{{language}}\n{{selection}}\n```",
-            tags: ["markdown", "code"],
-            defaultEnhancement: Enhancement(placement: .wrap, wrapPrefix: "```\n", wrapSuffix: "\n```")
+            title: "Test First",
+            content: "Write comprehensive tests first (TDD), then implement to make them pass.",
+            tags: ["testing", "tdd"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 9
         ),
         Prompt(
-            title: "Quote Block",
-            content: "> {{selection}}",
-            tags: ["markdown", "quote"],
-            defaultEnhancement: Enhancement(placement: .wrap, transforms: [.quote])
+            title: "Architecture Mode",
+            content: "<architecture>Design the system architecture before writing any code. Consider scalability, maintainability, and trade-offs.</architecture>",
+            tags: ["architecture", "design"],
+            defaultEnhancement: Enhancement(placement: .cursor),
+            displayOrder: 10
         )
     ]
 }

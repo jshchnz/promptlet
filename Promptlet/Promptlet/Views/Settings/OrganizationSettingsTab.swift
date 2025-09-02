@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct OrganizationSettingsTab: View {
     @ObservedObject var settings: AppSettings
@@ -18,10 +19,11 @@ struct OrganizationSettingsTab: View {
     @State private var showingRenameCategory = false
     @State private var renameCategoryName = ""
     @State private var showingDeleteConfirmation = false
-    @State private var sortOrder: SortOrder = .name
+    @State private var sortOrder: SortOrder = .manual
     @State private var showArchived = false
     
     enum SortOrder: String, CaseIterable {
+        case manual = "Manual"
         case name = "Name"
         case dateCreated = "Date Created"
         case lastUsed = "Last Used"
@@ -41,6 +43,8 @@ struct OrganizationSettingsTab: View {
         let filtered = showArchived ? prompts : prompts.filter { !$0.isArchived }
         
         switch sortOrder {
+        case .manual:
+            return filtered.sorted { $0.displayOrder < $1.displayOrder }
         case .name:
             return filtered.sorted { $0.title < $1.title }
         case .dateCreated:
@@ -114,6 +118,37 @@ struct OrganizationSettingsTab: View {
             
             // Main content - Prompt list
             VStack(spacing: 0) {
+                // Palette sort mode preference
+                HStack {
+                    Text("Palette Sort Mode:")
+                        .font(.caption)
+                    
+                    Picker("", selection: $promptStore.paletteSortMode) {
+                        ForEach(PaletteSortMode.allCases, id: \.self) { mode in
+                            Label(mode.displayName, systemImage: mode.icon)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 150)
+                    .onChange(of: promptStore.paletteSortMode) { _ in
+                        promptStore.savePreferences()
+                    }
+                    
+                    Text(promptStore.paletteSortMode == .smart ? 
+                         "Sorts by usage frequency and recency" : 
+                         "Uses your custom drag-and-drop order")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+                
+                Divider()
+                
                 // Toolbar
                 HStack {
                     // Bulk actions
@@ -171,43 +206,85 @@ struct OrganizationSettingsTab: View {
                 Divider()
                 
                 // Prompt table
-                ScrollView {
-                    VStack(spacing: 0) {
-                        // Table header
-                        HStack {
-                            Text("Select")
-                                .frame(width: 50, alignment: .leading)
-                            Text("Title")
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Text("Category")
-                                .frame(width: 100, alignment: .leading)
-                            Text("Tags")
-                                .frame(width: 150, alignment: .leading)
-                            Text("Usage")
-                                .frame(width: 60, alignment: .trailing)
+                VStack(spacing: 0) {
+                    // Table header
+                    HStack {
+                        if sortOrder == .manual {
+                            Text("")
+                                .frame(width: 30)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(NSColor.controlBackgroundColor))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        
-                        Divider()
-                        
-                        // Prompt rows
-                        ForEach(displayedPrompts) { prompt in
-                            PromptOrganizationRow(
-                                prompt: prompt,
-                                isSelected: selectedPromptIds.contains(prompt.id),
-                                onToggle: {
-                                    if selectedPromptIds.contains(prompt.id) {
-                                        selectedPromptIds.remove(prompt.id)
-                                    } else {
-                                        selectedPromptIds.insert(prompt.id)
-                                    }
-                                },
-                                promptStore: promptStore
-                            )
+                        Text("Select")
+                            .frame(width: 50, alignment: .leading)
+                        Text("Title")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text("Category")
+                            .frame(width: 100, alignment: .leading)
+                        Text("Tags")
+                            .frame(width: 150, alignment: .leading)
+                        Text("Usage")
+                            .frame(width: 60, alignment: .trailing)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    
+                    Divider()
+                    
+                    // Prompt rows - use List for drag and drop support
+                    if sortOrder == .manual {
+                        // Manual sorting with drag and drop
+                        List {
+                            ForEach(displayedPrompts) { prompt in
+                                PromptOrganizationRow(
+                                    prompt: prompt,
+                                    isSelected: selectedPromptIds.contains(prompt.id),
+                                    onToggle: {
+                                        if selectedPromptIds.contains(prompt.id) {
+                                            selectedPromptIds.remove(prompt.id)
+                                        } else {
+                                            selectedPromptIds.insert(prompt.id)
+                                        }
+                                    },
+                                    promptStore: promptStore,
+                                    showDragHandle: true
+                                )
+                                .listRowInsets(EdgeInsets())
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(
+                                    selectedPromptIds.contains(prompt.id) ? 
+                                    Color.accentColor.opacity(0.1) : Color.clear
+                                )
+                            }
+                            .onMove(perform: movePrompts)
+                            .onInsert(of: [.plainText]) { index, providers in
+                                // Empty implementation to prevent macOS drag issues
+                            }
+                        }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                    } else {
+                        // Other sort modes without drag and drop
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(displayedPrompts) { prompt in
+                                    PromptOrganizationRow(
+                                        prompt: prompt,
+                                        isSelected: selectedPromptIds.contains(prompt.id),
+                                        onToggle: {
+                                            if selectedPromptIds.contains(prompt.id) {
+                                                selectedPromptIds.remove(prompt.id)
+                                            } else {
+                                                selectedPromptIds.insert(prompt.id)
+                                            }
+                                        },
+                                        promptStore: promptStore,
+                                        showDragHandle: false
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -257,6 +334,26 @@ struct OrganizationSettingsTab: View {
             Text("Are you sure you want to delete '\(selectedCategory ?? "")'? Prompts in this category will become uncategorized.")
         }
     }
+    
+    private func movePrompts(from source: IndexSet, to destination: Int) {
+        print("movePrompts called - from: \(source), to: \(destination)")
+        
+        // Get the actual prompts array we're displaying
+        var movedPrompts = displayedPrompts
+        
+        // Perform the move in our local copy
+        movedPrompts.move(fromOffsets: source, toOffset: destination)
+        
+        // Update the displayOrder for each moved prompt
+        for (index, prompt) in movedPrompts.enumerated() {
+            if let globalIndex = promptStore.prompts.firstIndex(where: { $0.id == prompt.id }) {
+                promptStore.prompts[globalIndex].displayOrder = index
+            }
+        }
+        
+        // Trigger store update
+        promptStore.objectWillChange.send()
+    }
 }
 
 struct PromptOrganizationRow: View {
@@ -264,16 +361,25 @@ struct PromptOrganizationRow: View {
     let isSelected: Bool
     let onToggle: () -> Void
     @ObservedObject var promptStore: PromptStore
+    var showDragHandle: Bool = false
     @State private var showingCategoryMenu = false
     
     var body: some View {
-        HStack {
+        HStack(spacing: 0) {
+            if showDragHandle {
+                Image(systemName: "line.3.horizontal")
+                    .foregroundColor(.secondary)
+                    .frame(width: 30)
+                    .padding(.leading, 12)
+            }
+            
             Toggle("", isOn: Binding(
                 get: { isSelected },
                 set: { _ in onToggle() }
             ))
             .toggleStyle(.checkbox)
             .frame(width: 50)
+            .padding(.leading, showDragHandle ? 0 : 12)
             
             Text(prompt.title)
                 .lineLimit(1)
@@ -309,13 +415,10 @@ struct PromptOrganizationRow: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding(.horizontal, 12)
+        .padding(.trailing, 12)
+        .padding(.leading, showDragHandle ? 0 : 12)
         .padding(.vertical, 6)
-        .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
         .contentShape(Rectangle())
-        .onTapGesture {
-            onToggle()
-        }
     }
     
     private func updateCategory(_ category: String?) {

@@ -79,7 +79,7 @@ struct SettingsView: View {
                 case "quickslots":
                     QuickSlotsSettingsTab(settings: settings, promptStore: promptStore)
                 case "debug":
-                    DebugSettingsTab(settings: settings)
+                    DebugSettingsTab(settings: settings, promptStore: promptStore)
                 default:
                     GeneralSettingsTab(settings: settings)
                 }

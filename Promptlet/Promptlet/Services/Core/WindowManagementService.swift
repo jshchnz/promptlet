@@ -27,7 +27,7 @@ class WindowManagementService: WindowManagementServiceProtocol {
             let hostingView = NSHostingView(rootView: settingsView)
             
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 750, height: 550),
+                contentRect: NSRect(x: 0, y: 0, width: 900, height: 650),
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered,
                 defer: false
