@@ -17,6 +17,7 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
     @Published var isCheckingPermissions = false
     
     private var monitoringTimer: Timer?
+    private var permissionChangeCallbacks: [(Bool) -> Void] = []
     
     private init() {
         checkAllPermissions()
@@ -38,7 +39,14 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
     
     func checkAccessibilityPermission() {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        let previousState = hasAccessibilityPermission
         hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options)
+        
+        // Notify callbacks if permission state changed
+        if previousState != hasAccessibilityPermission {
+            logInfo(.permission, "Accessibility permission changed: \(hasAccessibilityPermission ? "granted" : "revoked")")
+            notifyPermissionChange(hasAccessibilityPermission)
+        }
     }
     
     func checkAppleEventsPermission() {
@@ -46,7 +54,13 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
         let appleScript = NSAppleScript(source: "return true")
         var error: NSDictionary?
         let _ = appleScript?.executeAndReturnError(&error)
+        let previousState = hasAppleEventsPermission
         hasAppleEventsPermission = (error == nil)
+        
+        // Log if permission state changed
+        if previousState != hasAppleEventsPermission {
+            logInfo(.permission, "Apple Events permission changed: \(hasAppleEventsPermission ? "granted" : "revoked")")
+        }
     }
     
     // MARK: - Permission Requesting
@@ -138,6 +152,7 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
         // Don't start multiple timers
         guard monitoringTimer == nil else { return }
         
+        logInfo(.permission, "Starting permission monitoring")
         monitoringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.checkAllPermissions()
@@ -146,6 +161,7 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
     }
     
     func stopMonitoring() {
+        logInfo(.permission, "Stopping permission monitoring")
         monitoringTimer?.invalidate()
         monitoringTimer = nil
     }
@@ -157,9 +173,28 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
+                logDebug(.permission, "App became active, checking permissions")
                 self?.checkAllPermissions()
             }
         }
+    }
+    
+    // MARK: - Permission Change Callbacks
+    
+    func addPermissionChangeCallback(_ callback: @escaping (Bool) -> Void) {
+        permissionChangeCallbacks.append(callback)
+        logDebug(.permission, "Added permission change callback")
+    }
+    
+    private func notifyPermissionChange(_ hasPermission: Bool) {
+        logInfo(.permission, "Notifying \(permissionChangeCallbacks.count) callbacks of permission change")
+        for callback in permissionChangeCallbacks {
+            callback(hasPermission)
+        }
+    }
+    
+    func getDetailedStatus() -> String {
+        return "Accessibility: \(hasAccessibilityPermission ? "✓" : "✗"), Apple Events: \(hasAppleEventsPermission ? "✓" : "✗"), Status: \(permissionStatus.description)"
     }
 }
 

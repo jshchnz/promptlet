@@ -178,6 +178,33 @@ class MenuBarController: NSObject {
         menu.addItem(resetPositionItem)
         
         menu.addItem(NSMenuItem.separator())
+        
+        // Diagnostics submenu
+        let diagnosticsSubmenu = NSMenu()
+        
+        let shortcutStatusItem = NSMenuItem(title: "Shortcut Status", action: #selector(showShortcutStatus), keyEquivalent: "")
+        shortcutStatusItem.target = self
+        diagnosticsSubmenu.addItem(shortcutStatusItem)
+        
+        let permissionStatusItem = NSMenuItem(title: "Permission Status", action: #selector(showPermissionStatus), keyEquivalent: "")
+        permissionStatusItem.target = self
+        diagnosticsSubmenu.addItem(permissionStatusItem)
+        
+        let resetShortcutsItem = NSMenuItem(title: "Reset Shortcuts", action: #selector(resetShortcuts), keyEquivalent: "")
+        resetShortcutsItem.target = self
+        diagnosticsSubmenu.addItem(resetShortcutsItem)
+        
+        diagnosticsSubmenu.addItem(NSMenuItem.separator())
+        
+        let showLogsItem = NSMenuItem(title: "Show Debug Logs", action: #selector(showDebugLogs), keyEquivalent: "")
+        showLogsItem.target = self
+        diagnosticsSubmenu.addItem(showLogsItem)
+        
+        let diagnosticsItem = NSMenuItem(title: "Diagnostics", action: nil, keyEquivalent: "")
+        diagnosticsItem.submenu = diagnosticsSubmenu
+        menu.addItem(diagnosticsItem)
+        
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit Promptlet", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
         statusItem.menu = menu
@@ -214,6 +241,24 @@ class MenuBarController: NSObject {
     
     @objc private func resetWindowPosition() {
         delegate?.menuBarResetWindowPosition()
+    }
+    
+    // MARK: - Diagnostic Actions
+    
+    @objc private func showShortcutStatus() {
+        delegate?.menuBarShowShortcutStatus()
+    }
+    
+    @objc private func showPermissionStatus() {
+        delegate?.menuBarShowPermissionStatus()
+    }
+    
+    @objc private func resetShortcuts() {
+        delegate?.menuBarResetShortcuts()
+    }
+    
+    @objc private func showDebugLogs() {
+        delegate?.menuBarShowDebugLogs()
     }
     
     func showInsertedFeedback() {
@@ -255,4 +300,10 @@ protocol MenuBarDelegate: AnyObject {
     func menuBarInsertQuickSlotPrompt(_ promptId: UUID)
     func menuBarOpenSettings()
     func menuBarResetWindowPosition()
+    
+    // Diagnostic methods
+    func menuBarShowShortcutStatus()
+    func menuBarShowPermissionStatus()
+    func menuBarResetShortcuts()
+    func menuBarShowDebugLogs()
 }

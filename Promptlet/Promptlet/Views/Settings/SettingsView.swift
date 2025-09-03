@@ -87,7 +87,7 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(NSColor.controlBackgroundColor))
         }
-        .frame(width: 750, height: 550)
+        .frame(width: 900, height: 650)
     }
 }
 

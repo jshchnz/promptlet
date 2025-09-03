@@ -6,6 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+/* End PBXBuildFile section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F45F1D8F2E626E6E002583A7 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F45F1D8C2E626E6E002583A6 /* Promptlet */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileReference section */
 		F45F1D8D2E626E6E002583A6 /* Promptlet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Promptlet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -13,6 +26,9 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F45F1D8F2E626E6E002583A6 /* Promptlet */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F45F1D8F2E626E6E002583A7 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
 			path = Promptlet;
 			sourceTree = "<group>";
 		};
@@ -257,8 +273,10 @@
 				DEVELOPMENT_TEAM = Z69AA836Q7;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Promptlet/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Promptlet;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -286,8 +304,10 @@
 				DEVELOPMENT_TEAM = Z69AA836Q7;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Promptlet/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Promptlet;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

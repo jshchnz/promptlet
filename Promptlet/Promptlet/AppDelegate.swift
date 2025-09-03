@@ -83,9 +83,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         permissionService.requestAccessibilityPermissions()
         keyboardController.setupGlobalHotkey()
         
+        // Set up integration between permission manager and keyboard controller
+        setupPermissionIntegration()
+        
         // Show the palette for the first time after onboarding
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.showPalette()
+        }
+    }
+    
+    private func setupPermissionIntegration() {
+        // Add callback to re-register keyboard monitors when accessibility permission changes
+        if let permissionManager = permissionService {
+            permissionManager.addPermissionChangeCallback { [weak self] hasPermission in
+                logInfo(.permission, "Permission change callback triggered: \(hasPermission)")
+                if hasPermission {
+                    logInfo(.keyboard, "Accessibility permission restored, re-registering monitors")
+                    self?.keyboardController.forceReregisterMonitors()
+                } else {
+                    logWarning(.keyboard, "Accessibility permission lost, monitors may not work")
+                }
+            }
+            
+            // Start monitoring permissions
+            permissionManager.startMonitoringPermissions()
         }
     }
     
@@ -269,6 +290,116 @@ extension AppDelegate: MenuBarDelegate {
         appSettings.resetWindowPosition()
         menuBarController.showResetFeedback()
         logInfo(.window, "Reset window position")
+    }
+    
+    // MARK: - Diagnostic Menu Methods
+    
+    func menuBarShowShortcutStatus() {
+        let status = keyboardController.getHealthStatus()
+        let shortcut = appSettings.getShortcut(for: .showPalette)?.displayString ?? "Not configured"
+        
+        let alert = NSAlert()
+        alert.messageText = "Keyboard Shortcut Status"
+        alert.informativeText = """
+        Current Shortcut: \(shortcut)
+        Monitor Status: \(status)
+        
+        If the shortcut isn't working:
+        • Try using "Reset Shortcuts" from this menu
+        • Check that Accessibility permissions are granted
+        • Restart the app if issues persist
+        """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+    
+    func menuBarShowPermissionStatus() {
+        if let permissionManager = permissionService {
+            let status = permissionManager.getDetailedStatus()
+            
+            let alert = NSAlert()
+            alert.messageText = "Permission Status"
+            alert.informativeText = """
+            \(status)
+            
+            Promptlet requires Accessibility permission to:
+            • Capture global keyboard shortcuts
+            • Insert text at cursor position
+            • Switch between applications
+            
+            If permissions are missing, click "Grant Permissions" to open System Preferences.
+            """
+            alert.alertStyle = .informational
+            
+            if !permissionManager.allPermissionsGranted {
+                alert.addButton(withTitle: "Grant Permissions")
+                alert.addButton(withTitle: "Cancel")
+                
+                let response = alert.runModal()
+                if response == .alertFirstButtonReturn {
+                    permissionManager.showPermissionInstructions()
+                }
+            } else {
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
+        }
+    }
+    
+    func menuBarResetShortcuts() {
+        let alert = NSAlert()
+        alert.messageText = "Reset Keyboard Shortcuts"
+        alert.informativeText = "This will re-register the global keyboard shortcut monitors. This can help if shortcuts have stopped working."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Reset")
+        alert.addButton(withTitle: "Cancel")
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            logInfo(.keyboard, "User triggered shortcut reset from menu")
+            keyboardController.forceReregisterMonitors()
+            
+            // Show confirmation
+            let confirmAlert = NSAlert()
+            confirmAlert.messageText = "Shortcuts Reset"
+            confirmAlert.informativeText = "Keyboard shortcuts have been reset. Try using your global shortcut now."
+            confirmAlert.alertStyle = .informational
+            confirmAlert.addButton(withTitle: "OK")
+            confirmAlert.runModal()
+        }
+    }
+    
+    func menuBarShowDebugLogs() {
+        let logs = LogService.shared.getLogsAsString()
+        
+        // Create a temporary file with the logs
+        let tempDir = FileManager.default.temporaryDirectory
+        let logFile = tempDir.appendingPathComponent("promptlet_debug_logs.txt")
+        
+        do {
+            try logs.write(to: logFile, atomically: true, encoding: .utf8)
+            NSWorkspace.shared.open(logFile)
+            logInfo(.app, "Debug logs exported and opened")
+        } catch {
+            logError(.app, "Failed to export debug logs: \\(error)")
+            
+            // Fallback: show logs in alert
+            let alert = NSAlert()
+            alert.messageText = "Debug Logs"
+            alert.informativeText = "Recent logs (last 50 lines):"
+            
+            let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 500, height: 300))
+            let textView = NSTextView(frame: scrollView.bounds)
+            textView.string = String(logs.split(separator: "\\n").suffix(50).joined(separator: "\\n"))
+            textView.isEditable = false
+            textView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+            scrollView.documentView = textView
+            
+            alert.accessoryView = scrollView
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
     }
 }
 

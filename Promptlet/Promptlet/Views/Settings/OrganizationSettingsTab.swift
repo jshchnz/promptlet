@@ -22,6 +22,9 @@ struct OrganizationSettingsTab: View {
     @State private var sortOrder: SortOrder = .manual
     @State private var showArchived = false
     
+    @State private var editingPrompt: Prompt?
+    @State private var isCreatingNew = false
+    
     enum SortOrder: String, CaseIterable {
         case manual = "Manual"
         case name = "Name"
@@ -131,7 +134,7 @@ struct OrganizationSettingsTab: View {
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 150)
-                    .onChange(of: promptStore.paletteSortMode) { _ in
+                    .onChange(of: promptStore.paletteSortMode) {
                         promptStore.savePreferences()
                     }
                     
@@ -185,6 +188,22 @@ struct OrganizationSettingsTab: View {
                     
                     Spacer()
                     
+                    // New Prompt button
+                    Button("New Prompt") {
+                        let newPrompt = Prompt(
+                            title: "New Prompt",
+                            content: "",
+                            category: selectedCategory == "Uncategorized" ? nil : selectedCategory
+                        )
+                        editingPrompt = newPrompt
+                        isCreatingNew = true
+                    }
+                    .controlSize(.small)
+                    .buttonStyle(.borderedProminent)
+                    
+                    Spacer()
+                        .frame(width: 12)
+                    
                     // View options
                     Toggle("Show Archived", isOn: $showArchived)
                         .toggleStyle(.checkbox)
@@ -223,6 +242,8 @@ struct OrganizationSettingsTab: View {
                             .frame(width: 150, alignment: .leading)
                         Text("Usage")
                             .frame(width: 60, alignment: .trailing)
+                        Text("Edit")
+                            .frame(width: 30, alignment: .center)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -246,6 +267,10 @@ struct OrganizationSettingsTab: View {
                                         } else {
                                             selectedPromptIds.insert(prompt.id)
                                         }
+                                    },
+                                    onEdit: {
+                                        editingPrompt = prompt
+                                        isCreatingNew = false
                                     },
                                     promptStore: promptStore,
                                     showDragHandle: true
@@ -279,6 +304,10 @@ struct OrganizationSettingsTab: View {
                                             } else {
                                                 selectedPromptIds.insert(prompt.id)
                                             }
+                                        },
+                                        onEdit: {
+                                            editingPrompt = prompt
+                                            isCreatingNew = false
                                         },
                                         promptStore: promptStore,
                                         showDragHandle: false
@@ -333,6 +362,34 @@ struct OrganizationSettingsTab: View {
         } message: {
             Text("Are you sure you want to delete '\(selectedCategory ?? "")'? Prompts in this category will become uncategorized.")
         }
+        .sheet(item: $editingPrompt) { prompt in
+            PromptEditorView(
+                prompt: prompt,
+                onSave: { updatedPrompt in
+                    if isCreatingNew {
+                        var newPrompt = updatedPrompt
+                        newPrompt.category = selectedCategory == "Uncategorized" ? nil : selectedCategory
+                        promptStore.addPrompt(newPrompt)
+                    } else {
+                        promptStore.updatePrompt(updatedPrompt)
+                    }
+                    editingPrompt = nil
+                },
+                onCancel: {
+                    editingPrompt = nil
+                }
+            )
+        }
+        .onKeyPress(.return) {
+            if selectedPromptIds.count == 1,
+               let promptId = selectedPromptIds.first,
+               let prompt = promptStore.prompts.first(where: { $0.id == promptId }) {
+                editingPrompt = prompt
+                isCreatingNew = false
+                return .handled
+            }
+            return .ignored
+        }
     }
     
     private func movePrompts(from source: IndexSet, to destination: Int) {
@@ -360,6 +417,7 @@ struct PromptOrganizationRow: View {
     let prompt: Prompt
     let isSelected: Bool
     let onToggle: () -> Void
+    let onEdit: () -> Void
     @ObservedObject var promptStore: PromptStore
     var showDragHandle: Bool = false
     @State private var showingCategoryMenu = false
@@ -414,11 +472,52 @@ struct PromptOrganizationRow: View {
                 .frame(width: 60, alignment: .trailing)
                 .font(.caption)
                 .foregroundColor(.secondary)
+            
+            Button(action: onEdit) {
+                Image(systemName: "pencil")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+            .frame(width: 30)
+            .help("Edit Prompt")
         }
         .padding(.trailing, 12)
         .padding(.leading, showDragHandle ? 0 : 12)
         .padding(.vertical, 6)
         .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            onEdit()
+        }
+        .contextMenu {
+            Button("Edit") {
+                onEdit()
+            }
+            
+            Divider()
+            
+            Button(prompt.isFavorite ? "Remove from Favorites" : "Add to Favorites") {
+                var updatedPrompt = prompt
+                updatedPrompt.isFavorite.toggle()
+                promptStore.updatePrompt(updatedPrompt)
+            }
+            
+            Button("Duplicate") {
+                promptStore.duplicatePrompt(prompt)
+            }
+            
+            Divider()
+            
+            Button(prompt.isArchived ? "Unarchive" : "Archive") {
+                var updatedPrompt = prompt
+                updatedPrompt.isArchived.toggle()
+                promptStore.updatePrompt(updatedPrompt)
+            }
+            
+            Button("Delete", role: .destructive) {
+                promptStore.deletePrompt(prompt)
+            }
+        }
     }
     
     private func updateCategory(_ category: String?) {
