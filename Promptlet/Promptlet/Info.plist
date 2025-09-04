@@ -34,8 +34,6 @@
 	<string>NSApplication</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2025 Josh Cohenzadeh. All rights reserved.</string>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>Promptlet needs to send keystrokes to insert prompts at your cursor position.</string>
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Promptlet needs accessibility access to insert text at your cursor position.</string>
 	<key>NSServices</key>

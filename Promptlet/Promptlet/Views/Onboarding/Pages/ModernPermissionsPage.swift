@@ -66,14 +66,14 @@ struct ModernPermissionsPage: View {
                 // Title and subtitle
                 VStack(spacing: 6) {
                     Text(permissionManager.allPermissionsGranted 
-                        ? "Permissions Granted!" 
+                        ? "Permission Granted!" 
                         : "Let's set up Promptlet's superpowers")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.primaryText)
                     
                     Text(permissionManager.allPermissionsGranted 
                         ? "Promptlet can now work its magic anywhere"
-                        : "Two quick permissions to work in any app")
+                        : "One quick permission to work in any app")
                         .font(.system(size: 13))
                         .foregroundColor(.secondaryText)
                         .multilineTextAlignment(.center)
@@ -81,13 +81,14 @@ struct ModernPermissionsPage: View {
             }
             .frame(height: 130)
             
-            // Middle section - Permission cards - 140px
-            HStack(spacing: 16) {
+            // Middle section - Permission card - 180px
+            VStack {
+                Spacer()
                 ModernPermissionCard(
                     title: "Accessibility",
                     subtitle: "Insert text instantly",
-                    description: "Lets Promptlet type directly at your cursor",
-                    example: "Works in any text field",
+                    description: "Lets Promptlet type directly at your cursor and send keystrokes to any app",
+                    example: "Works everywhere",
                     icon: "cursorarrow.rays",
                     isGranted: permissionManager.hasAccessibilityPermission,
                     isChecking: checkingPermissions,
@@ -99,26 +100,10 @@ struct ModernPermissionsPage: View {
                         }
                     }
                 )
-                
-                ModernPermissionCard(
-                    title: "Automation", 
-                    subtitle: "Send keystrokes",
-                    description: "Allows typing your prompts automatically",
-                    example: "Works in every app",
-                    icon: "keyboard",
-                    isGranted: permissionManager.hasAppleEventsPermission,
-                    isChecking: checkingPermissions,
-                    showCard: showCards,
-                    delay: 0.4,
-                    action: {
-                        requestPermission {
-                            permissionManager.requestAppleEventsPermission()
-                        }
-                    }
-                )
+                Spacer()
             }
-            .frame(height: 160)
-            .padding(.horizontal, 60)
+            .frame(height: 180)
+            .padding(.horizontal, 30)
             
             // Bottom section - Privacy note - 100px
             VStack(spacing: 16) {
@@ -151,7 +136,7 @@ struct ModernPermissionsPage: View {
                     }
                     .transition(.scale.combined(with: .opacity))
                 } else {
-                    Text("Grant both permissions to continue")
+                    Text("Grant accessibility permission to continue")
                         .font(.system(size: 11))
                         .foregroundColor(.tertiaryText)
                 }
@@ -309,7 +294,7 @@ struct ModernPermissionCard: View {
             .frame(height: 28)
         }
         .padding(16)
-        .frame(width: 230, height: 150)
+        .frame(width: 280, height: 160)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.secondaryBackground.opacity(0.5))

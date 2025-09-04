@@ -18,9 +18,11 @@ import SwiftUI
 class OnboardingService: OnboardingServiceProtocol {
     private var onboardingWindow: OnboardingWindow?
     private let settings: AppSettings
+    private let promptStore: PromptStore
     
-    init(settings: AppSettings) {
+    init(settings: AppSettings, promptStore: PromptStore) {
         self.settings = settings
+        self.promptStore = promptStore
     }
     
     var isOnboardingNeeded: Bool {
@@ -36,6 +38,7 @@ class OnboardingService: OnboardingServiceProtocol {
         
         let onboardingView = ModernOnboardingView(
             settings: settings,
+            promptStore: promptStore,
             onComplete: { [weak self] in
                 self?.completeOnboarding(onComplete: onComplete)
             }

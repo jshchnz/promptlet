@@ -6,11 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-/* End PBXBuildFile section */
+/* Begin PBXFileReference section */
+		F45F1D8D2E626E6E002583A6 /* Promptlet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Promptlet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		F45F1D8F2E626E6E002583A7 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		F45F1D8F2E626E6E002583A7 /* Exceptions for "Promptlet" folder in "Promptlet" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -19,15 +20,14 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
-/* Begin PBXFileReference section */
-		F45F1D8D2E626E6E002583A6 /* Promptlet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Promptlet.app; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F45F1D8F2E626E6E002583A6 /* Promptlet */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F45F1D8F2E626E6E002583A7 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				F45F1D8F2E626E6E002583A7 /* Exceptions for "Promptlet" folder in "Promptlet" target */,
+			);
+			explicitFolders = (
+				Ultrathink.Ultrathink.Ultrathink.Ultrathink.Ultrathink.Ultrathink.Ultrathink.Ultrathink.,
 			);
 			path = Promptlet;
 			sourceTree = "<group>";

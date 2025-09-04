@@ -11,7 +11,7 @@ import AppKit
 class OnboardingWindow: NSWindow {
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 680, height: 540),
+            contentRect: NSRect(x: 0, y: 0, width: 760, height: 600),
             styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -23,8 +23,8 @@ class OnboardingWindow: NSWindow {
         self.backgroundColor = NSColor.clear
         
         // Set minimum and maximum size to prevent resizing
-        self.minSize = NSSize(width: 680, height: 540)
-        self.maxSize = NSSize(width: 680, height: 540)
+        self.minSize = NSSize(width: 760, height: 600)
+        self.maxSize = NSSize(width: 760, height: 600)
         
         // Floating level brings to front but allows system dialogs on top
         self.level = .floating

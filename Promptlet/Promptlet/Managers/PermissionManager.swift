@@ -13,7 +13,6 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
     static let shared = PermissionManager()
     
     @Published var hasAccessibilityPermission = false
-    @Published var hasAppleEventsPermission = false
     @Published var isCheckingPermissions = false
     
     private var monitoringTimer: Timer?
@@ -34,7 +33,6 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
     
     func checkAllPermissions() {
         checkAccessibilityPermission()
-        checkAppleEventsPermission()
     }
     
     func checkAccessibilityPermission() {
@@ -49,19 +47,6 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
         }
     }
     
-    func checkAppleEventsPermission() {
-        // Check Apple Events permission by trying to execute a simple AppleScript
-        let appleScript = NSAppleScript(source: "return true")
-        var error: NSDictionary?
-        let _ = appleScript?.executeAndReturnError(&error)
-        let previousState = hasAppleEventsPermission
-        hasAppleEventsPermission = (error == nil)
-        
-        // Log if permission state changed
-        if previousState != hasAppleEventsPermission {
-            logInfo(.permission, "Apple Events permission changed: \(hasAppleEventsPermission ? "granted" : "revoked")")
-        }
-    }
     
     // MARK: - Permission Requesting
     
@@ -78,11 +63,6 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
         return trusted
     }
     
-    func requestAppleEventsPermission() {
-        // Apple Events permission will be requested automatically
-        // when the app tries to send events to other apps
-        hasAppleEventsPermission = true
-    }
     
     // MARK: - Protocol Conformance (PermissionServiceProtocol)
     
@@ -133,14 +113,12 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
     }
     
     var allPermissionsGranted: Bool {
-        hasAccessibilityPermission && hasAppleEventsPermission
+        hasAccessibilityPermission
     }
     
     var permissionStatus: PermissionStatus {
         if allPermissionsGranted {
             return .granted
-        } else if hasAccessibilityPermission || hasAppleEventsPermission {
-            return .partial
         } else {
             return .denied
         }
@@ -194,7 +172,7 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
     }
     
     func getDetailedStatus() -> String {
-        return "Accessibility: \(hasAccessibilityPermission ? "✓" : "✗"), Apple Events: \(hasAppleEventsPermission ? "✓" : "✗"), Status: \(permissionStatus.description)"
+        return "Accessibility: \(hasAccessibilityPermission ? "✓" : "✗"), Status: \(permissionStatus.description)"
     }
 }
 

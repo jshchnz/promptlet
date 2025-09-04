@@ -18,6 +18,12 @@ protocol TextInsertionServiceProtocol {
     ///   - completion: Called when insertion is complete
     func insertPrompt(_ prompt: Prompt, completion: @escaping () -> Void)
     
+    /// Inserts a prompt's content directly at current cursor position without app switching
+    /// - Parameters:
+    ///   - prompt: The prompt to insert
+    ///   - completion: Called when insertion is complete
+    func insertPromptDirectly(_ prompt: Prompt, completion: @escaping () -> Void)
+    
     /// Sets the previous app to return focus to after insertion
     /// - Parameter app: The application to restore focus to
     func setPreviousApp(_ app: NSRunningApplication?)

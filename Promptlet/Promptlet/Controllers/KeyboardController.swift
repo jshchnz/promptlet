@@ -54,6 +54,39 @@ class KeyboardController: NSObject {
                    showPaletteShortcut.matches(event: event) {
                     logDebug(.keyboard, "Global shortcut triggered: \(showPaletteShortcut.displayString)")
                     self.delegate?.keyboardShowPalette()
+                    return
+                }
+                
+                // Skip if we're currently performing keyboard simulation (avoid feedback loop)
+                if TextInsertionService.isPerformingKeyboardSimulation {
+                    return
+                }
+                
+                // Skip events without modifiers (performance optimization)
+                let relevantFlags: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
+                let hasModifiers = !event.modifierFlags.intersection(relevantFlags).isEmpty
+                if !hasModifiers {
+                    return
+                }
+                
+                // Check quick slot shortcuts (only when palette is NOT visible)
+                guard let delegate = self.delegate, !delegate.isPaletteVisible() else { 
+                    return 
+                }
+                
+                let quickSlotActions: [(ShortcutAction, Int)] = [
+                    (.quickSlot1, 1), (.quickSlot2, 2), (.quickSlot3, 3),
+                    (.quickSlot4, 4), (.quickSlot5, 5), (.quickSlot6, 6),
+                    (.quickSlot7, 7), (.quickSlot8, 8), (.quickSlot9, 9)
+                ]
+                
+                for (action, slot) in quickSlotActions {
+                    if let shortcut = self.appSettings.getShortcut(for: action),
+                       shortcut.matches(event: event) {
+                        logDebug(.keyboard, "Quick slot \(slot) triggered: \(shortcut.displayString)")
+                        delegate.keyboardQuickSlot(slot)
+                        return
+                    }
                 }
             }
             
@@ -84,6 +117,39 @@ class KeyboardController: NSObject {
                     self.delegate?.keyboardShowPalette()
                     return nil // Consume the event to prevent the beep
                 }
+                
+                // Skip if we're currently performing keyboard simulation (avoid feedback loop)
+                if TextInsertionService.isPerformingKeyboardSimulation {
+                    return event
+                }
+                
+                // Skip events without modifiers (performance optimization)
+                let relevantFlags: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
+                let hasModifiers = !event.modifierFlags.intersection(relevantFlags).isEmpty
+                if !hasModifiers {
+                    return event
+                }
+                
+                // Check quick slot shortcuts (only when palette is NOT visible)
+                guard let delegate = self.delegate, !delegate.isPaletteVisible() else { 
+                    return event 
+                }
+                
+                let quickSlotActions: [(ShortcutAction, Int)] = [
+                    (.quickSlot1, 1), (.quickSlot2, 2), (.quickSlot3, 3),
+                    (.quickSlot4, 4), (.quickSlot5, 5), (.quickSlot6, 6),
+                    (.quickSlot7, 7), (.quickSlot8, 8), (.quickSlot9, 9)
+                ]
+                
+                for (action, slot) in quickSlotActions {
+                    if let shortcut = self.appSettings.getShortcut(for: action),
+                       shortcut.matches(event: event) {
+                        logDebug(.keyboard, "Quick slot \(slot) triggered: \(shortcut.displayString)")
+                        delegate.keyboardQuickSlot(slot)
+                        return nil // Consume the event to prevent the beep
+                    }
+                }
+                
                 return event
             }
             

@@ -93,11 +93,33 @@ class AppSettings: ObservableObject {
             // Load saved shortcuts
             do {
                 shortcuts = try JSONDecoder().decode([ShortcutAction: KeyboardShortcut].self, from: keyboardShortcutsData)
+                
                 // Add any missing default shortcuts for new actions
                 for (action, defaultShortcut) in KeyboardShortcut.defaultShortcuts {
                     if shortcuts[action] == nil {
                         shortcuts[action] = defaultShortcut
                     }
+                }
+                
+                // Fix corrupted quick slot shortcuts (missing modifiers)
+                let quickSlotActions: [ShortcutAction] = [
+                    .quickSlot1, .quickSlot2, .quickSlot3, .quickSlot4, .quickSlot5,
+                    .quickSlot6, .quickSlot7, .quickSlot8, .quickSlot9
+                ]
+                
+                var fixedCorruptedShortcuts = false
+                for action in quickSlotActions {
+                    if let shortcut = shortcuts[action], shortcut.modifierFlags == 0 {
+                        // Quick slot shortcut has no modifiers - this is corrupted, restore default
+                        logWarning(.settings, "Fixing corrupted shortcut for \(action): restoring default")
+                        shortcuts[action] = KeyboardShortcut.defaultShortcuts[action]
+                        fixedCorruptedShortcuts = true
+                    }
+                }
+                
+                // Save the fixed shortcuts if any were corrupted
+                if fixedCorruptedShortcuts {
+                    saveShortcuts()
                 }
             } catch {
                 logError(.settings, "Failed to decode shortcuts: \(error)")

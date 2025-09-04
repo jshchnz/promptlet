@@ -42,7 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Initialize services
         textInsertionService = TextInsertionService()
         windowManagementService = WindowManagementService()
-        onboardingService = OnboardingService(settings: appSettings)
+        onboardingService = OnboardingService(settings: appSettings, promptStore: promptStore)
         permissionService = PermissionManager.shared
         logInfo(.app, "Services initialized")
         
@@ -424,7 +424,12 @@ extension AppDelegate: KeyboardControllerDelegate {
     
     func keyboardQuickSlot(_ slot: Int) {
         if let prompt = promptStore.quickSlotPrompts[slot] {
-            insertPrompt(prompt)
+            // Use direct insertion for quick slots - no app switching or palette hiding
+            textInsertionService.insertPromptDirectly(prompt) { [weak self] in
+                // Record usage and show feedback
+                self?.promptStore.recordUsage(for: prompt.id)
+                self?.menuBarController.showInsertedFeedback()
+            }
         }
     }
     

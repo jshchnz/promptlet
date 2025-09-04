@@ -10,13 +10,14 @@ import SwiftUI
 struct ModernOnboardingView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var permissionManager = PermissionManager.shared
+    @ObservedObject var promptStore: PromptStore
     @State private var currentStep = 0
     @Environment(\.dismiss) private var dismiss
     
     let onComplete: () -> Void
     
-    // Always show 3 steps
-    private let totalSteps = 3
+    // Always show 4 steps
+    private let totalSteps = 4
     
     var body: some View {
         VStack(spacing: 0) {
@@ -51,6 +52,9 @@ struct ModernOnboardingView: View {
                     ModernPermissionsPage(permissionManager: permissionManager)
                         .transition(.opacity)
                 case 2:
+                    QuickSlotsSetupPage(promptStore: promptStore, settings: settings)
+                        .transition(.opacity)
+                case 3:
                     ReadyPage(onTest: testShortcut)
                         .transition(.opacity)
                 default:

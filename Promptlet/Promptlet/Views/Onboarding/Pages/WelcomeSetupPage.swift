@@ -11,34 +11,42 @@ struct WelcomeSetupPage: View {
     @ObservedObject var settings: AppSettings
     @State private var selectedPreset = 0
     @State private var customShortcut: KeyboardShortcut?
+    @State private var logoScale: CGFloat = 0.8
+    @State private var logoOpacity: Double = 0.0
     
     private let presets = [
-        ("⌘⇧Space", KeyboardShortcut(keyCode: 49, modifierFlags: NSEvent.ModifierFlags([.command, .shift]).rawValue)),
+        ("⌘⇧.", KeyboardShortcut(keyCode: 47, modifierFlags: NSEvent.ModifierFlags([.command, .shift]).rawValue)),
         ("⌃⇧P", KeyboardShortcut(keyCode: 35, modifierFlags: NSEvent.ModifierFlags([.control, .shift]).rawValue)),
         ("⌥⌘P", KeyboardShortcut(keyCode: 35, modifierFlags: NSEvent.ModifierFlags([.option, .command]).rawValue))
     ]
     
     var body: some View {
         VStack(spacing: 0) {
-            // Top spacing - 30px
+            // Top spacing - 40px
             Spacer()
-                .frame(height: 30)
+                .frame(height: 40)
             
-            // App icon - 60x60
-            Image(systemName: "command.square.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color.accent, Color.accent.opacity(0.8)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 60, height: 60)
+            // App icon - 200x200
+            Image("promptlet")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 200, height: 200)
+                .scaleEffect(logoScale)
+                .opacity(logoOpacity)
+                .onAppear {
+                    // Load-in animation: scale up and fade in
+                    withAnimation(
+                        .spring(response: 0.8, dampingFraction: 0.6, blendDuration: 0.3)
+                        .delay(0.2)
+                    ) {
+                        logoScale = 1.0
+                        logoOpacity = 1.0
+                    }
+                }
             
-            // Spacing - 20px
+            // Spacing - 6px
             Spacer()
-                .frame(height: 20)
+                .frame(height: 6)
             
             // Title and description - ~45px
             VStack(spacing: 8) {
@@ -69,6 +77,7 @@ struct WelcomeSetupPage: View {
                             isSelected: selectedPreset == index,
                             action: {
                                 selectedPreset = index
+                                customShortcut = nil
                                 settings.updateShortcut(for: .showPalette, shortcut: presets[index].1)
                                 NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
                             }
@@ -84,11 +93,33 @@ struct WelcomeSetupPage: View {
                     
                     ShortcutFieldView(
                         shortcut: Binding(
-                            get: { customShortcut ?? settings.getShortcut(for: .showPalette) },
+                            get: { 
+                                selectedPreset == -1 ? customShortcut : nil
+                            },
                             set: { newShortcut in
                                 customShortcut = newShortcut
                                 settings.updateShortcut(for: .showPalette, shortcut: newShortcut)
-                                selectedPreset = -1
+                                
+                                // Check if new shortcut matches any preset
+                                if let newShortcut = newShortcut {
+                                    var foundMatch = false
+                                    for (index, preset) in presets.enumerated() {
+                                        if newShortcut.keyCode == preset.1.keyCode &&
+                                           newShortcut.modifierFlags == preset.1.modifierFlags {
+                                            selectedPreset = index
+                                            customShortcut = nil
+                                            foundMatch = true
+                                            break
+                                        }
+                                    }
+                                    if !foundMatch {
+                                        selectedPreset = -1
+                                    }
+                                } else {
+                                    selectedPreset = -1
+                                }
+                                
+                                NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
                             }
                         ),
                         isRequired: true
@@ -112,8 +143,24 @@ struct WelcomeSetupPage: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            // Set default shortcut if none exists
-            if settings.getShortcut(for: .showPalette) == nil {
+            if let existingShortcut = settings.getShortcut(for: .showPalette) {
+                // Check if existing shortcut matches any preset
+                var foundMatch = false
+                for (index, preset) in presets.enumerated() {
+                    if existingShortcut.keyCode == preset.1.keyCode &&
+                       existingShortcut.modifierFlags == preset.1.modifierFlags {
+                        selectedPreset = index
+                        foundMatch = true
+                        break
+                    }
+                }
+                // If no preset matches, it's a custom shortcut
+                if !foundMatch {
+                    selectedPreset = -1
+                    customShortcut = existingShortcut
+                }
+            } else {
+                // Set default shortcut if none exists
                 selectedPreset = 0
                 settings.updateShortcut(for: .showPalette, shortcut: presets[0].1)
                 NotificationCenter.default.post(name: .shortcutsChanged, object: nil)

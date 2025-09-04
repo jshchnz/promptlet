@@ -18,6 +18,7 @@ import Foundation
 @MainActor
 class TextInsertionService: TextInsertionServiceProtocol {
     private var previousApp: NSRunningApplication?
+    static var isPerformingKeyboardSimulation = false
     
     func insertPrompt(_ prompt: Prompt, completion: @escaping () -> Void) {
         logPerformanceStart("text_insertion")
@@ -26,36 +27,113 @@ class TextInsertionService: TextInsertionServiceProtocol {
         
         // Save current clipboard
         let previousClipboard = NSPasteboard.general.string(forType: .string)
+        logDebug(.textInsertion, "Saved clipboard content: \(previousClipboard?.prefix(50) ?? "nil")...")
         
         // Set prompt content to clipboard
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(content, forType: .string)
+        
+        // Verify clipboard was set correctly
+        let verifyClipboard = NSPasteboard.general.string(forType: .string)
+        if verifyClipboard != content {
+            logError(.textInsertion, "Clipboard verification failed. Expected: \(content), Got: \(verifyClipboard ?? "nil")")
+        } else {
+            logDebug(.textInsertion, "Clipboard set successfully: \(content)")
+        }
         
         // Restore focus to the original app
         if let app = previousApp {
             logDebug(.textInsertion, "Restoring focus to: \(app.localizedName ?? "unknown")")
             app.activate()
             
-            // Wait for focus to restore, then paste
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                self?.simulatePaste()
-                
-                // Restore previous clipboard after a delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if let previous = previousClipboard {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(previous, forType: .string)
-                    }
-                    
-                    logPerformanceEnd("text_insertion", "Text insertion completed")
-                    completion()
-                }
-                
-                logSuccess(.textInsertion, "Successfully inserted prompt: \(prompt.title)")
+            // Wait longer for focus to restore, then verify and paste
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.performClipboardVerificationAndPaste(expectedContent: content, prompt: prompt, previousClipboard: previousClipboard, completion: completion)
             }
         } else {
+            logWarning(.textInsertion, "No previous app to restore focus to")
             completion()
         }
+    }
+    
+    private func performClipboardVerificationAndPaste(expectedContent: String, prompt: Prompt, previousClipboard: String?, completion: @escaping () -> Void, attempt: Int = 1) {
+        // Verify clipboard still contains our content
+        let currentClipboard = NSPasteboard.general.string(forType: .string)
+        
+        if currentClipboard != expectedContent {
+            logWarning(.textInsertion, "Clipboard content changed before paste. Expected: \(expectedContent), Got: \(currentClipboard ?? "nil")")
+            
+            if attempt <= 3 {
+                logDebug(.textInsertion, "Retrying clipboard set (attempt \(attempt + 1)/3)")
+                
+                // Re-set the clipboard content and retry
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(expectedContent, forType: .string)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                    self?.performClipboardVerificationAndPaste(expectedContent: expectedContent, prompt: prompt, previousClipboard: previousClipboard, completion: completion, attempt: attempt + 1)
+                }
+                return
+            } else {
+                logError(.textInsertion, "Failed to maintain clipboard content after 3 attempts")
+            }
+        }
+        
+        // Perform the paste
+        self.simulatePaste()
+        
+        // Restore previous clipboard after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if let previous = previousClipboard {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(previous, forType: .string)
+                logDebug(.textInsertion, "Restored previous clipboard content")
+            }
+            
+            logPerformanceEnd("text_insertion", "Text insertion completed")
+            completion()
+        }
+        
+        logSuccess(.textInsertion, "Successfully inserted prompt: \(prompt.title)")
+    }
+    
+    func insertPromptDirectly(_ prompt: Prompt, completion: @escaping () -> Void) {
+        logPerformanceStart("direct_text_insertion")
+        
+        let content = prompt.renderedContent(with: [:])
+        
+        // Save current clipboard
+        let previousClipboard = NSPasteboard.general.string(forType: .string)
+        logDebug(.textInsertion, "Saved clipboard content for direct insertion: \(previousClipboard?.prefix(50) ?? "nil")...")
+        
+        // Set prompt content to clipboard
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(content, forType: .string)
+        
+        // Verify clipboard was set correctly
+        let verifyClipboard = NSPasteboard.general.string(forType: .string)
+        if verifyClipboard != content {
+            logError(.textInsertion, "Clipboard verification failed for direct insertion. Expected: \(content), Got: \(verifyClipboard ?? "nil")")
+        } else {
+            logDebug(.textInsertion, "Clipboard set successfully for direct insertion: \(content)")
+        }
+        
+        // Perform immediate paste without app switching
+        self.simulatePaste()
+        
+        // Restore previous clipboard after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if let previous = previousClipboard {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(previous, forType: .string)
+                logDebug(.textInsertion, "Restored previous clipboard content after direct insertion")
+            }
+            
+            logPerformanceEnd("direct_text_insertion", "Direct text insertion completed")
+            completion()
+        }
+        
+        logSuccess(.textInsertion, "Successfully performed direct insertion of prompt: \(prompt.title)")
     }
     
     func setPreviousApp(_ app: NSRunningApplication?) {
@@ -66,6 +144,9 @@ class TextInsertionService: TextInsertionServiceProtocol {
     }
     
     private func simulatePaste() {
+        // Set flag to indicate we're performing keyboard simulation
+        TextInsertionService.isPerformingKeyboardSimulation = true
+        
         // Use CGEvent to simulate Cmd+V
         let source = CGEventSource(stateID: .hidSystemState)
         
@@ -88,5 +169,10 @@ class TextInsertionService: TextInsertionServiceProtocol {
         cmdUp?.post(tap: .cghidEventTap)
         
         logDebug(.textInsertion, "Pasted via keyboard simulation")
+        
+        // Clear the flag after a short delay to allow events to propagate
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            TextInsertionService.isPerformingKeyboardSimulation = false
+        }
     }
 }
