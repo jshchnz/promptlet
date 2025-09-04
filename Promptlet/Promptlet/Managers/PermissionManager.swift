@@ -43,6 +43,14 @@ class PermissionManager: ObservableObject, PermissionServiceProtocol {
         // Notify callbacks if permission state changed
         if previousState != hasAccessibilityPermission {
             logInfo(.permission, "Accessibility permission changed: \(hasAccessibilityPermission ? "granted" : "revoked")")
+            
+            // Track permission events
+            if hasAccessibilityPermission {
+                trackAnalytics(.permissionGranted, properties: ["type": "accessibility"])
+            } else {
+                trackAnalytics(.permissionDenied, properties: ["type": "accessibility"])
+            }
+            
             notifyPermissionChange(hasAccessibilityPermission)
         }
     }

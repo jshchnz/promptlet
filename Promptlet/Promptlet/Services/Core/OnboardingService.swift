@@ -31,6 +31,7 @@ class OnboardingService: OnboardingServiceProtocol {
     
     func showOnboarding(onComplete: @escaping () -> Void) {
         logInfo(.onboarding, "Showing onboarding - first launch detected")
+        trackAnalytics(.onboardingStarted)
         
         if onboardingWindow == nil {
             onboardingWindow = OnboardingWindow()

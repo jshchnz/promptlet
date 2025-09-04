@@ -23,6 +23,12 @@ enum DefaultPosition: String, CaseIterable, Codable {
 class AppSettings: ObservableObject {
     @AppStorage("themeMode") var themeMode: String = ThemeMode.auto.rawValue {
         didSet {
+            if oldValue != themeMode {
+                trackAnalytics(.themeChanged, properties: [
+                    "old_theme": oldValue,
+                    "new_theme": themeMode
+                ])
+            }
             applyTheme()
         }
     }
@@ -37,14 +43,34 @@ class AppSettings: ObservableObject {
     @AppStorage("launchCount") var launchCount: Int = 0
     
     // Visual Settings
-    @AppStorage("enableAnimations") var enableAnimations: Bool = true
-    @AppStorage("showMenuBarIcon") var showMenuBarIcon: Bool = true
+    @AppStorage("enableAnimations") var enableAnimations: Bool = true {
+        didSet {
+            if oldValue != enableAnimations {
+                trackAnalytics(.animationsToggled, properties: ["enabled": enableAnimations])
+            }
+        }
+    }
+    @AppStorage("showMenuBarIcon") var showMenuBarIcon: Bool = true {
+        didSet {
+            if oldValue != showMenuBarIcon {
+                trackAnalytics(.menuBarIconToggled, properties: ["enabled": showMenuBarIcon])
+            }
+        }
+    }
     @AppStorage("showQuickSlotsInMenuBar") var showQuickSlotsInMenuBar: Bool = true
     @AppStorage("menuBarQuickSlotCount") var menuBarQuickSlotCount: Int = 5
     
     // Debug Settings
-    @AppStorage("debugMode") var debugMode: Bool = false
+    @AppStorage("debugMode") var debugMode: Bool = false {
+        didSet {
+            if oldValue != debugMode {
+                trackAnalytics(.debugModeToggled, properties: ["enabled": debugMode])
+            }
+        }
+    }
     @AppStorage("showTechnicalInfo") var showTechnicalInfo: Bool = false
+    
+    // Analytics is always enabled - no user setting needed
     
     @Published var shortcuts: [ShortcutAction: KeyboardShortcut] = [:] {
         didSet {
@@ -137,6 +163,7 @@ class AppSettings: ObservableObject {
     }
     
     func resetShortcutsToDefault() {
+        trackAnalytics(.shortcutsReset)
         shortcuts = KeyboardShortcut.defaultShortcuts
     }
     
@@ -145,6 +172,8 @@ class AppSettings: ObservableObject {
     }
     
     func updateShortcut(for action: ShortcutAction, shortcut: KeyboardShortcut?) {
+        let oldShortcut = shortcuts[action]
+        
         if let shortcut = shortcut, shortcut.isValid(for: action) {
             // Remove any other actions using this same shortcut
             for (existingAction, existingShortcut) in shortcuts {
@@ -157,6 +186,14 @@ class AppSettings: ObservableObject {
             shortcuts[action] = shortcut
         } else {
             shortcuts[action] = nil
+        }
+        
+        // Track shortcut change
+        if oldShortcut?.keyCode != shortcuts[action]?.keyCode || oldShortcut?.modifierFlags != shortcuts[action]?.modifierFlags {
+            trackAnalytics(.shortcutChanged, properties: [
+                "action": action.rawValue,
+                "has_shortcut": shortcuts[action] != nil
+            ])
         }
     }
     

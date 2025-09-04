@@ -40,6 +40,14 @@ struct PaletteView: View {
                 TextField("Type to search...", text: $store.searchText)
                     .textFieldStyle(.plain)
                     .focused($isSearchFocused)
+                    .onChange(of: store.searchText) { _, newValue in
+                        if !newValue.isEmpty && newValue.count >= 2 {
+                            trackAnalytics(.searchPerformed, properties: [
+                                "query_length": newValue.count,
+                                "results_count": store.filteredPrompts.count
+                            ])
+                        }
+                    }
                     .onSubmit {
                         if let prompt = controller.getCurrentPrompt() {
                             onInsert(prompt)
@@ -59,7 +67,12 @@ struct PaletteView: View {
                 
                 // Sort mode toggle
                 Button(action: {
-                    store.paletteSortMode = store.paletteSortMode == .smart ? .manual : .smart
+                    let newMode = store.paletteSortMode == .smart ? PaletteSortMode.manual : PaletteSortMode.smart
+                    trackAnalytics(.sortModeChanged, properties: [
+                        "old_mode": store.paletteSortMode.rawValue,
+                        "new_mode": newMode.rawValue
+                    ])
+                    store.paletteSortMode = newMode
                     store.savePreferences()
                 }) {
                     Image(systemName: store.paletteSortMode.icon)

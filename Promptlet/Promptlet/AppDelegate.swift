@@ -35,6 +35,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         logInfo(.app, "Application launched")
         
+        // Initialize analytics first
+        AnalyticsService.shared.initialize()
+        
         initializeServices()
         initializeControllers()
         setupServiceCoordination()
@@ -105,6 +108,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func completeSetup() {
         keyboardController.setupGlobalHotkey()
         
+        // Track app launch with analytics
+        let isFirstLaunch = appSettings.launchCount <= 1
+        AnalyticsService.shared.trackAppLaunch(isFirstLaunch: isFirstLaunch)
+        AnalyticsService.shared.startSession()
+        
         // Show the palette for the first time after setup
         DispatchQueue.main.asyncAfter(deadline: .now() + Timing.focusRestoreDelay) { [weak self] in
             self?.serviceCoordinator.showPalette()
@@ -117,6 +125,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationWillTerminate(_ notification: Notification) {
         logInfo(.app, "Application terminating, cleaning up resources")
+        
+        // Track app termination and cleanup analytics
+        trackAnalytics(.appTerminated)
+        AnalyticsService.shared.shutdown()
+        
         serviceCoordinator.cleanup()
         appSetupService.cleanup()
         NotificationCenter.default.removeObserver(self)
@@ -138,6 +151,7 @@ extension AppDelegate: MenuBarDelegate {
         guard let prompt = promptStore.prompts.first(where: { $0.id == promptId }) else {
             return
         }
+        trackPromptAction(.promptInserted, promptId: promptId, method: "menu_bar_recent")
         serviceCoordinator.insertPrompt(prompt)
     }
     
@@ -145,14 +159,18 @@ extension AppDelegate: MenuBarDelegate {
         guard let prompt = promptStore.prompts.first(where: { $0.id == promptId }) else {
             return
         }
+        trackAnalytics(.menuBarPromptUsed, properties: ["type": "quick_slot"])
+        trackPromptAction(.promptInserted, promptId: promptId, method: "menu_bar_quick_slot")
         serviceCoordinator.insertPrompt(prompt)
     }
     
     func menuBarOpenSettings() {
+        trackAnalytics(.settingsOpened, properties: ["source": "menu_bar"])
         serviceCoordinator.showSettings()
     }
     
     func menuBarResetWindowPosition() {
+        trackAnalytics(.windowPositionReset, properties: ["source": "menu_bar"])
         serviceCoordinator.resetWindowPosition()
     }
     

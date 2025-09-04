@@ -95,6 +95,7 @@ class KeyboardController: NSObject {
                 monitorRegistrationFailures = 0
             } else {
                 logError(.keyboard, "Failed to register global event monitor")
+                trackError(.keyboardShortcutFailed, error: "Failed to register global event monitor")
                 monitorRegistrationFailures += 1
             }
         }
@@ -157,6 +158,7 @@ class KeyboardController: NSObject {
                 logSuccess(.keyboard, "Local event monitor registered successfully")
             } else {
                 logError(.keyboard, "Failed to register local event monitor")
+                trackError(.keyboardShortcutFailed, error: "Failed to register local event monitor")
                 monitorRegistrationFailures += 1
             }
         }
@@ -169,6 +171,7 @@ class KeyboardController: NSObject {
             }
         } else if monitorRegistrationFailures > maxRetries {
             logError(.keyboard, "Max retries reached for monitor registration, manual intervention may be required")
+            trackError(.keyboardShortcutFailed, error: "Max retries reached for monitor registration", context: "retries_exhausted")
         }
     }
     

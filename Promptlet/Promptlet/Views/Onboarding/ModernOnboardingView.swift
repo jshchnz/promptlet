@@ -29,6 +29,7 @@ struct ModernOnboardingView: View {
                 
                 if currentStep < totalSteps - 1 {
                     Button("Skip") {
+                        trackAnalytics(.onboardingSkipped, properties: ["step": currentStep])
                         completeOnboarding()
                     }
                     .buttonStyle(.plain)
@@ -88,6 +89,7 @@ struct ModernOnboardingView: View {
                     .keyboardShortcut(.defaultAction)
                 } else {
                     Button("Continue") {
+                        trackAnalytics(.onboardingStepCompleted, properties: ["step": currentStep])
                         withAnimation(.easeInOut(duration: 0.2)) {
                             currentStep += 1
                         }
@@ -158,6 +160,7 @@ struct ModernOnboardingView: View {
     }
     
     private func completeOnboarding() {
+        trackAnalytics(.onboardingCompleted, properties: ["total_steps": totalSteps])
         permissionManager.stopMonitoring()
         settings.hasCompletedOnboarding = true
         settings.onboardingVersion = 2

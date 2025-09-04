@@ -155,6 +155,9 @@ class ServiceCoordinator: ObservableObject {
             return
         }
         
+        // Track palette opening
+        trackAnalytics(.paletteOpened)
+        
         // Save the currently active app before showing palette
         let currentApp = NSWorkspace.shared.frontmostApplication
         textInsertionService.setPreviousApp(currentApp)
@@ -175,6 +178,7 @@ class ServiceCoordinator: ObservableObject {
     
     func hidePalette() {
         logDebug(.ui, "Hiding palette")
+        trackAnalytics(.paletteClosed)
         windowController?.hidePalette(animated: appSettings.enableAnimations)
         keyboardController?.stopPaletteKeyboardMonitoring()
     }
@@ -207,6 +211,9 @@ class ServiceCoordinator: ObservableObject {
         guard let textInsertionService = textInsertionService,
               let menuBarController = menuBarController else { return }
         
+        // Track prompt insertion
+        trackPromptAction(.promptInserted, promptId: prompt.id, method: "palette")
+        
         // Hide palette first to release focus
         hidePalette()
         
@@ -221,6 +228,9 @@ class ServiceCoordinator: ObservableObject {
     func insertPromptDirectly(_ prompt: Prompt) {
         guard let textInsertionService = textInsertionService,
               let menuBarController = menuBarController else { return }
+        
+        // Track direct prompt insertion
+        trackPromptAction(.promptInsertedDirect, promptId: prompt.id, method: "direct")
         
         textInsertionService.insertPromptDirectly(prompt) { [weak self] in
             self?.promptStore.recordUsage(for: prompt.id)
@@ -320,6 +330,8 @@ class ServiceCoordinator: ObservableObject {
     
     func selectQuickSlot(_ slot: Int) {
         if let prompt = promptStore.quickSlotPrompts[slot] {
+            trackAnalytics(.quickSlotUsed, properties: ["slot": slot])
+            trackPromptAction(.promptInserted, promptId: prompt.id, method: "quick_slot")
             insertPromptDirectly(prompt)
         }
     }

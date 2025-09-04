@@ -132,6 +132,7 @@ class PromptStore: ObservableObject {
         newPrompt.displayOrder = (prompts.map { $0.displayOrder }.max() ?? -1) + 1
         
         logInfo(.prompt, "Adding prompt: \(newPrompt.title)")
+        trackPromptAction(.promptCreated, promptId: newPrompt.id)
         prompts.append(newPrompt)
     }
     
@@ -148,6 +149,7 @@ class PromptStore: ObservableObject {
         
         let sanitizedPrompt = validationService.sanitizePrompt(prompt)
         logInfo(.prompt, "Updating prompt: \(sanitizedPrompt.title)")
+        trackPromptAction(.promptEdited, promptId: sanitizedPrompt.id)
         prompts[index] = sanitizedPrompt
     }
     
@@ -157,6 +159,7 @@ class PromptStore: ObservableObject {
         
         if prompts.count < initialCount {
             logInfo(.prompt, "Deleted prompt: \(prompt.title)")
+            trackPromptAction(.promptDeleted, promptId: prompt.id)
         } else {
             logWarning(.prompt, "No prompt found to delete with ID: \(prompt.id)")
         }
@@ -181,6 +184,7 @@ class PromptStore: ObservableObject {
             displayOrder: 0  // Will be assigned in addPrompt
         )
         logInfo(.prompt, "Duplicating prompt: \(prompt.title) -> \(newPrompt.title)")
+        trackPromptAction(.promptDuplicated, promptId: prompt.id)
         addPrompt(newPrompt)
     }
     
@@ -211,19 +215,34 @@ class PromptStore: ObservableObject {
     // MARK: - Import/Export (delegated to persistence service)
     
     func importPrompts(from data: Data) throws {
-        let newPrompts = try persistenceService.importPrompts(from: data, currentPrompts: prompts)
-        
-        var importedCount = 0
-        for prompt in newPrompts {
-            addPrompt(prompt)
-            importedCount += 1
+        do {
+            let newPrompts = try persistenceService.importPrompts(from: data, currentPrompts: prompts)
+            
+            var importedCount = 0
+            for prompt in newPrompts {
+                addPrompt(prompt)
+                importedCount += 1
+            }
+            
+            logSuccess(.prompt, "Successfully imported \(importedCount) new prompts")
+            trackAnalytics(.promptImported, properties: ["count": importedCount])
+        } catch {
+            logError(.prompt, "Import failed: \(error.localizedDescription)")
+            trackError(.importFailed, error: error.localizedDescription, context: "prompt_import")
+            throw error
         }
-        
-        logSuccess(.prompt, "Successfully imported \(importedCount) new prompts")
     }
     
     func exportPrompts() throws -> Data {
-        return try persistenceService.exportPrompts(prompts)
+        do {
+            let data = try persistenceService.exportPrompts(prompts)
+            trackAnalytics(.promptExported, properties: ["count": prompts.count])
+            return data
+        } catch {
+            logError(.prompt, "Export failed: \(error.localizedDescription)")
+            trackError(.exportFailed, error: error.localizedDescription, context: "prompt_export")
+            throw error
+        }
     }
     
     // MARK: - Persistence (delegated to persistence service)
@@ -306,6 +325,7 @@ class PromptStore: ObservableObject {
     
     func resetToDefaultPrompts() {
         logWarning(.prompt, "Resetting prompts to defaults")
+        trackAnalytics(.promptsResetToDefault)
         prompts = Prompt.samplePrompts
         categoryManager.resetToDefaults()
         savePrompts()
@@ -314,6 +334,7 @@ class PromptStore: ObservableObject {
     
     func clearAllPrompts() {
         logWarning(.prompt, "Clearing all prompts")
+        trackAnalytics(.promptsClearedAll, properties: ["previous_count": prompts.count])
         prompts = []
         savePrompts()
         logSuccess(.prompt, "All prompts cleared")

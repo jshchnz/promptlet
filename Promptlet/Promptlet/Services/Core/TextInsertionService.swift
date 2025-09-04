@@ -22,6 +22,7 @@ class TextInsertionService: TextInsertionServiceProtocol {
     
     func insertPrompt(_ prompt: Prompt, completion: @escaping () -> Void) {
         logPerformanceStart("text_insertion")
+        let startTime = Date()
         
         let content = prompt.renderedContent(with: [:])
         
@@ -37,6 +38,7 @@ class TextInsertionService: TextInsertionServiceProtocol {
         let verifyClipboard = NSPasteboard.general.string(forType: .string)
         if verifyClipboard != content {
             logError(.textInsertion, "Clipboard verification failed. Expected: \(content), Got: \(verifyClipboard ?? "nil")")
+            trackError(.textInsertionFailed, error: "Clipboard verification failed", context: "initial_set")
         } else {
             logDebug(.textInsertion, "Clipboard set successfully: \(content)")
         }
@@ -48,7 +50,7 @@ class TextInsertionService: TextInsertionServiceProtocol {
             
             // Wait longer for focus to restore, then verify and paste
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                self?.performClipboardVerificationAndPaste(expectedContent: content, prompt: prompt, previousClipboard: previousClipboard, completion: completion)
+                self?.performClipboardVerificationAndPaste(expectedContent: content, prompt: prompt, previousClipboard: previousClipboard, completion: completion, startTime: startTime)
             }
         } else {
             logWarning(.textInsertion, "No previous app to restore focus to")
@@ -56,7 +58,7 @@ class TextInsertionService: TextInsertionServiceProtocol {
         }
     }
     
-    private func performClipboardVerificationAndPaste(expectedContent: String, prompt: Prompt, previousClipboard: String?, completion: @escaping () -> Void, attempt: Int = 1) {
+    private func performClipboardVerificationAndPaste(expectedContent: String, prompt: Prompt, previousClipboard: String?, completion: @escaping () -> Void, attempt: Int = 1, startTime: Date = Date()) {
         // Verify clipboard still contains our content
         let currentClipboard = NSPasteboard.general.string(forType: .string)
         
@@ -71,11 +73,12 @@ class TextInsertionService: TextInsertionServiceProtocol {
                 NSPasteboard.general.setString(expectedContent, forType: .string)
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                    self?.performClipboardVerificationAndPaste(expectedContent: expectedContent, prompt: prompt, previousClipboard: previousClipboard, completion: completion, attempt: attempt + 1)
+                    self?.performClipboardVerificationAndPaste(expectedContent: expectedContent, prompt: prompt, previousClipboard: previousClipboard, completion: completion, attempt: attempt + 1, startTime: startTime)
                 }
                 return
             } else {
                 logError(.textInsertion, "Failed to maintain clipboard content after 3 attempts")
+                trackError(.textInsertionFailed, error: "Failed to maintain clipboard content after retries", context: "clipboard_persistence")
             }
         }
         
@@ -88,6 +91,12 @@ class TextInsertionService: TextInsertionServiceProtocol {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(previous, forType: .string)
                 logDebug(.textInsertion, "Restored previous clipboard content")
+            }
+            
+            // Track performance
+            let duration = Date().timeIntervalSince(startTime)
+            if duration > 2.0 { // Log slow operations
+                AnalyticsService.shared.trackPerformance(.performanceWarning, duration: duration, operation: "text_insertion")
             }
             
             logPerformanceEnd("text_insertion", "Text insertion completed")
