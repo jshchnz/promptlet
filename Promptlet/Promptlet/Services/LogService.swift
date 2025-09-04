@@ -36,6 +36,7 @@ enum LogCategory: String, CaseIterable {
     case performance = "Performance"
     case textInsertion = "TextInsertion"
     case onboarding = "Onboarding"
+    case diagnostics = "Diagnostics"
 }
 
 struct LogEntry {

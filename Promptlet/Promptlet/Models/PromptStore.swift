@@ -2,7 +2,7 @@
 //  PromptStore.swift
 //  Promptlet
 //
-//  Created by Josh Cohenzadeh on 8/29/25.
+//  Refactored to use service-based architecture for better maintainability
 //
 
 import Foundation
@@ -51,87 +51,53 @@ enum PromptStoreError: LocalizedError {
 @MainActor
 class PromptStore: ObservableObject {
     @Published var prompts: [Prompt] = []
-    @Published var categories: [String] = ["Work", "Personal", "Templates"]
     @Published var searchText: String = ""
     @Published var selectedPlacement: PlacementMode = .cursor
     @Published var currentAppIdentifier: String = ""
     @Published var paletteSortMode: PaletteSortMode = .smart
     
-    private let saveKey = "com.promptlet.prompts"
-    private let preferencesKey = "com.promptlet.preferences"
+    // Services
+    private let searchService = PromptSearchService()
+    private let persistenceService = PromptPersistenceService()
+    private let validationService = PromptValidationService()
+    private lazy var categoryManager = CategoryManager(
+        persistenceService: persistenceService,
+        validationService: validationService
+    )
+    
     private var cancellables = Set<AnyCancellable>()
     
+    // Categories - delegated to CategoryManager
+    var categories: [String] {
+        categoryManager.getAllCategories()
+    }
+    
+    // MARK: - Computed Properties (delegated to services)
+    
     var filteredPrompts: [Prompt] {
-        var filtered = prompts.filter { !$0.isArchived }  // Hide archived prompts from palette
-        
-        if searchText.isEmpty {
-            // When not searching, use the selected sort mode
-            switch paletteSortMode {
-            case .smart:
-                return filtered.sorted { $0.frecencyScore > $1.frecencyScore }
-            case .manual:
-                return filtered.sorted { $0.displayOrder < $1.displayOrder }
-            }
-        }
-        
-        let searchLower = searchText.lowercased()
-        
-        if searchText.hasPrefix("#") {
-            let tag = String(searchText.dropFirst()).lowercased()
-            filtered = filtered.filter { prompt in
-                prompt.tags.contains { $0.lowercased().contains(tag) }
-            }
-        } else if searchText.hasPrefix("mode:") {
-            let mode = String(searchText.dropFirst(5)).lowercased()
-            filtered = filtered.filter { prompt in
-                prompt.defaultEnhancement.placement.rawValue.lowercased().contains(mode)
-            }
-        } else if searchText.hasPrefix("category:") {
-            let category = String(searchText.dropFirst(9)).lowercased()
-            filtered = filtered.filter { prompt in
-                if category == "uncategorized" || category == "none" {
-                    return prompt.category == nil
-                }
-                return prompt.category?.lowercased().contains(category) ?? false
-            }
-        } else {
-            filtered = filtered.filter { prompt in
-                prompt.title.lowercased().contains(searchLower) ||
-                prompt.content.lowercased().contains(searchLower) ||
-                prompt.tags.contains { $0.lowercased().contains(searchLower) }
-            }
-        }
-        
-        return filtered.sorted { $0.frecencyScore > $1.frecencyScore }
+        searchService.filterPrompts(prompts, searchText: searchText, sortMode: paletteSortMode)
     }
     
     var sortedPrompts: [Prompt] {
-        prompts.filter { !$0.isArchived }.sorted { $0.frecencyScore > $1.frecencyScore }
+        searchService.getSortedPrompts(prompts)
     }
     
     var favoritePrompts: [Prompt] {
-        prompts.filter { $0.isFavorite }.sorted { $0.title < $1.title }
+        searchService.getFavoritePrompts(prompts)
     }
     
     var recentPrompts: [Prompt] {
-        prompts.sorted { $0.lastUsedDate > $1.lastUsedDate }.prefix(5).map { $0 }
+        searchService.getRecentPrompts(prompts)
     }
     
     var quickSlotPrompts: [Int: Prompt] {
-        var slots: [Int: Prompt] = [:]
-        for prompt in prompts {
-            if let slot = prompt.quickSlot, slot >= 1 && slot <= 9 {
-                slots[slot] = prompt
-            }
-        }
-        return slots
+        searchService.getQuickSlotPrompts(prompts)
     }
     
     init() {
         logDebug(.prompt, "Initializing store...")
         loadPrompts()
         loadPreferences()
-        loadCategories()
         
         if prompts.isEmpty {
             logInfo(.prompt, "No prompts found, loading defaults...")
@@ -139,8 +105,9 @@ class PromptStore: ObservableObject {
             savePrompts()
         }
         
+        // Auto-save prompts when they change
         $prompts
-            .debounce(for: .seconds(0.5), scheduler: RunLoop.main)
+            .debounce(for: .seconds(Timing.debounceDelay), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.savePrompts()
             }
@@ -149,18 +116,18 @@ class PromptStore: ObservableObject {
         logSuccess(.prompt, "Store initialized with \(prompts.count) prompts")
     }
     
+    // MARK: - Prompt Management (with validation)
+    
     func addPrompt(_ prompt: Prompt) {
-        guard !prompt.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            logError(.prompt, "Cannot add prompt with empty title")
+        guard validationService.canAddPrompt(prompt, to: prompts) else {
+            let validation = validationService.validatePrompt(prompt)
+            if case .invalid(let errors, _) = validation {
+                logError(.prompt, "Cannot add prompt: \(errors.first?.errorDescription ?? "Validation failed")")
+            }
             return
         }
         
-        guard !prompts.contains(where: { $0.id == prompt.id }) else {
-            logWarning(.prompt, "Prompt with ID \(prompt.id) already exists")
-            return
-        }
-        
-        var newPrompt = prompt
+        var newPrompt = validationService.sanitizePrompt(prompt)
         // Assign next available displayOrder
         newPrompt.displayOrder = (prompts.map { $0.displayOrder }.max() ?? -1) + 1
         
@@ -170,17 +137,18 @@ class PromptStore: ObservableObject {
     
     func updatePrompt(_ prompt: Prompt) {
         guard let index = prompts.firstIndex(where: { $0.id == prompt.id }) else {
-            logError(.prompt, "Cannot update prompt: not found with ID \(prompt.id)")
+            logError(.prompt, ErrorMessages.promptNotFound)
             return
         }
         
-        guard !prompt.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            logError(.prompt, "Cannot update prompt with empty title")
+        guard validationService.canUpdatePrompt(prompt) else {
+            logError(.prompt, "Cannot update prompt: validation failed")
             return
         }
         
-        logInfo(.prompt, "Updating prompt: \(prompt.title)")
-        prompts[index] = prompt
+        let sanitizedPrompt = validationService.sanitizePrompt(prompt)
+        logInfo(.prompt, "Updating prompt: \(sanitizedPrompt.title)")
+        prompts[index] = sanitizedPrompt
     }
     
     func deletePrompt(_ prompt: Prompt) {
@@ -240,164 +208,82 @@ class PromptStore: ObservableObject {
         }
     }
     
+    // MARK: - Import/Export (delegated to persistence service)
+    
     func importPrompts(from data: Data) throws {
-        guard !data.isEmpty else {
-            throw PromptStoreError.invalidData("Import data is empty")
-        }
+        let newPrompts = try persistenceService.importPrompts(from: data, currentPrompts: prompts)
         
-        let decoder = JSONDecoder()
-        let imported: [Prompt]
-        
-        do {
-            imported = try decoder.decode([Prompt].self, from: data)
-        } catch {
-            logError(.prompt, "Failed to decode import data: \(error)")
-            throw PromptStoreError.decodingFailed(error)
-        }
-        
-        logInfo(.prompt, "Importing \(imported.count) prompts...")
         var importedCount = 0
-        
-        for prompt in imported {
-            if !prompts.contains(where: { $0.id == prompt.id }) {
-                addPrompt(prompt)
-                importedCount += 1
-            }
+        for prompt in newPrompts {
+            addPrompt(prompt)
+            importedCount += 1
         }
         
         logSuccess(.prompt, "Successfully imported \(importedCount) new prompts")
     }
     
     func exportPrompts() throws -> Data {
-        guard !prompts.isEmpty else {
-            throw PromptStoreError.noPromptsToExport
-        }
-        
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        encoder.dateEncodingStrategy = .iso8601
-        
-        do {
-            let data = try encoder.encode(prompts)
-            logInfo(.prompt, "Exported \(prompts.count) prompts")
-            return data
-        } catch {
-            logError(.prompt, "Failed to export prompts: \(error)")
-            throw PromptStoreError.encodingFailed(error)
-        }
+        return try persistenceService.exportPrompts(prompts)
     }
     
+    // MARK: - Persistence (delegated to persistence service)
+    
     private func loadPrompts() {
-        guard let data = UserDefaults.standard.data(forKey: saveKey) else {
-            logDebug(.prompt, "No saved prompts found")
-            return
-        }
-        
-        do {
-            let decoder = JSONDecoder()
-            prompts = try decoder.decode([Prompt].self, from: data)
-            
-            // Ensure all prompts have a displayOrder (for backward compatibility)
-            var needsNormalization = false
-            for (index, prompt) in prompts.enumerated() {
-                if prompt.displayOrder == 0 && prompts.filter({ $0.displayOrder == 0 }).count == prompts.count {
-                    // All have displayOrder 0, need to assign sequential values
-                    prompts[index].displayOrder = index
-                    needsNormalization = true
-                }
-            }
-            
-            if needsNormalization {
-                savePrompts()
-            }
-            
-            logInfo(.prompt, "Loaded \(prompts.count) prompts from storage")
-        } catch {
-            logError(.prompt, "Failed to load prompts: \(error)")
-        }
+        prompts = persistenceService.loadPrompts()
     }
     
     private func savePrompts() {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(prompts)
-            UserDefaults.standard.set(data, forKey: saveKey)
-            logDebug(.prompt, "Saved \(prompts.count) prompts to storage")
-        } catch {
-            logError(.prompt, "Failed to save prompts: \(error)")
-        }
+        persistenceService.savePrompts(prompts)
     }
     
     private func loadPreferences() {
-        if let placement = UserDefaults.standard.string(forKey: "\(preferencesKey).defaultPlacement"),
-           let mode = PlacementMode(rawValue: placement) {
-            selectedPlacement = mode
-        }
-        
-        currentAppIdentifier = UserDefaults.standard.string(forKey: "\(preferencesKey).lastApp") ?? ""
-        
-        if let sortMode = UserDefaults.standard.string(forKey: "\(preferencesKey).paletteSortMode"),
-           let mode = PaletteSortMode(rawValue: sortMode) {
-            paletteSortMode = mode
-        }
-        
-        logDebug(.prompt, "Loaded preferences - placement: \(selectedPlacement.rawValue), app: \(currentAppIdentifier), sort: \(paletteSortMode.rawValue)")
+        let (placement, appId, sortMode) = persistenceService.loadPreferences()
+        selectedPlacement = placement
+        currentAppIdentifier = appId
+        paletteSortMode = sortMode
     }
     
     func savePreferences() {
-        UserDefaults.standard.set(selectedPlacement.rawValue, forKey: "\(preferencesKey).defaultPlacement")
-        UserDefaults.standard.set(currentAppIdentifier, forKey: "\(preferencesKey).lastApp")
-        UserDefaults.standard.set(paletteSortMode.rawValue, forKey: "\(preferencesKey).paletteSortMode")
-        logDebug(.prompt, "Saved preferences")
+        persistenceService.savePreferences(
+            selectedPlacement: selectedPlacement,
+            currentAppIdentifier: currentAppIdentifier,
+            paletteSortMode: paletteSortMode
+        )
     }
     
-    // MARK: - Category Management
+    // MARK: - Category Management (delegated to category manager)
     
     func addCategory(_ category: String) {
-        let trimmed = category.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty && !categories.contains(trimmed) else { return }
-        categories.append(trimmed)
-        saveCategories()
+        _ = categoryManager.addCategory(category)
     }
     
     func removeCategory(_ category: String) {
-        categories.removeAll { $0 == category }
-        // Reset prompts in this category to uncategorized
-        for (index, prompt) in prompts.enumerated() where prompt.category == category {
-            prompts[index].category = nil
+        if categoryManager.removeCategory(category) {
+            // Reset prompts in this category to uncategorized
+            let movedCount = categoryManager.movePromptsToCategory(
+                Set(prompts.filter { $0.category == category }.map { $0.id }),
+                to: nil,
+                in: &prompts
+            )
+            logInfo(.prompt, "Moved \(movedCount) prompts from removed category '\(category)' to uncategorized")
         }
-        saveCategories()
     }
     
     func renameCategory(from oldName: String, to newName: String) {
-        guard let index = categories.firstIndex(of: oldName) else { return }
-        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty && !categories.contains(trimmed) else { return }
-        
-        categories[index] = trimmed
-        // Update prompts with this category
-        for (index, prompt) in prompts.enumerated() where prompt.category == oldName {
-            prompts[index].category = trimmed
+        if categoryManager.renameCategory(from: oldName, to: newName) {
+            // Update prompts with this category
+            for (index, prompt) in prompts.enumerated() where prompt.category == oldName {
+                prompts[index].category = newName
+            }
         }
-        saveCategories()
     }
     
     func promptsInCategory(_ category: String?) -> [Prompt] {
-        let filtered: [Prompt]
-        if category == nil {
-            filtered = prompts.filter { $0.category == nil && !$0.isArchived }
-        } else {
-            filtered = prompts.filter { $0.category == category && !$0.isArchived }
-        }
-        return filtered.sorted { $0.displayOrder < $1.displayOrder }
+        return searchService.getPromptsInCategory(prompts, category: category)
     }
     
     func movePrompts(_ promptIds: Set<UUID>, toCategory category: String?) {
-        for id in promptIds {
-            if let index = prompts.firstIndex(where: { $0.id == id }) {
-                prompts[index].category = category
-            }
-        }
+        _ = categoryManager.movePromptsToCategory(promptIds, to: category, in: &prompts)
     }
     
     func archivePrompts(_ promptIds: Set<UUID>) {
@@ -416,24 +302,13 @@ class PromptStore: ObservableObject {
         }
     }
     
-    private func saveCategories() {
-        UserDefaults.standard.set(categories, forKey: "\(saveKey).categories")
-    }
-    
-    private func loadCategories() {
-        if let saved = UserDefaults.standard.array(forKey: "\(saveKey).categories") as? [String] {
-            categories = saved
-        }
-    }
-    
     // MARK: - Debug/Reset Functions
     
     func resetToDefaultPrompts() {
         logWarning(.prompt, "Resetting prompts to defaults")
         prompts = Prompt.samplePrompts
-        categories = ["Work", "Personal", "Templates"]
+        categoryManager.resetToDefaults()
         savePrompts()
-        saveCategories()
         logSuccess(.prompt, "Reset to \(prompts.count) default prompts")
     }
     
@@ -450,12 +325,7 @@ class PromptStore: ObservableObject {
         var targetPrompts: [Prompt]
         
         if let category = category {
-            // Filter to prompts in the specified category
-            if category == "Uncategorized" {
-                targetPrompts = prompts.filter { $0.category == nil }
-            } else {
-                targetPrompts = prompts.filter { $0.category == category }
-            }
+            targetPrompts = promptsInCategory(category == "Uncategorized" ? nil : category)
         } else {
             targetPrompts = prompts
         }
@@ -487,5 +357,23 @@ class PromptStore: ObservableObject {
                 prompts[globalIndex].displayOrder = index
             }
         }
+    }
+    
+    // MARK: - Service Access (for advanced features)
+    
+    func getSearchService() -> PromptSearchService {
+        return searchService
+    }
+    
+    func getValidationService() -> PromptValidationService {
+        return validationService
+    }
+    
+    func getCategoryManager() -> CategoryManager {
+        return categoryManager
+    }
+    
+    func getPersistenceService() -> PromptPersistenceService {
+        return persistenceService
     }
 }

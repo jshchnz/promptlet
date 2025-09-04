@@ -72,7 +72,7 @@ struct KeyboardSettingsTab: View {
             Button("Cancel", role: .cancel) { }
             Button("Restore", role: .destructive) {
                 settings.resetShortcutsToDefault()
-                NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
+                NotificationCenter.default.post(name: NotificationNames.shortcutsChanged, object: nil)
             }
         } message: {
             Text("This will restore all keyboard shortcuts to their default values.")
@@ -129,7 +129,7 @@ struct ShortcutRow: View {
                     get: { settings.getShortcut(for: action) },
                     set: { newShortcut in
                         settings.updateShortcut(for: action, shortcut: newShortcut)
-                        NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
+                        NotificationCenter.default.post(name: NotificationNames.shortcutsChanged, object: nil)
                         onShortcutChanged()
                     }
                 ),

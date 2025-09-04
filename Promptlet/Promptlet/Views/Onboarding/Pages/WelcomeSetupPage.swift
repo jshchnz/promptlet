@@ -71,7 +71,7 @@ struct WelcomeSetupPage: View {
                 
                 // Preset buttons
                 HStack(spacing: 12) {
-                    ForEach(0..<presets.count, id: \.self) { index in
+                    ForEach(Array(0..<presets.count), id: \.self) { index in
                         PresetButton(
                             keys: presets[index].0,
                             isSelected: selectedPreset == index,
@@ -79,7 +79,7 @@ struct WelcomeSetupPage: View {
                                 selectedPreset = index
                                 customShortcut = nil
                                 settings.updateShortcut(for: .showPalette, shortcut: presets[index].1)
-                                NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
+                                NotificationCenter.default.post(name: NotificationNames.shortcutsChanged, object: nil)
                             }
                         )
                     }
@@ -119,7 +119,7 @@ struct WelcomeSetupPage: View {
                                     selectedPreset = -1
                                 }
                                 
-                                NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
+                                NotificationCenter.default.post(name: NotificationNames.shortcutsChanged, object: nil)
                             }
                         ),
                         isRequired: true
@@ -163,7 +163,7 @@ struct WelcomeSetupPage: View {
                 // Set default shortcut if none exists
                 selectedPreset = 0
                 settings.updateShortcut(for: .showPalette, shortcut: presets[0].1)
-                NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
+                NotificationCenter.default.post(name: NotificationNames.shortcutsChanged, object: nil)
             }
         }
     }

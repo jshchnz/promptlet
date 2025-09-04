@@ -196,7 +196,7 @@ struct QuickSlotRow: View {
                         get: { settings.getShortcut(for: quickSlotAction) },
                         set: { newShortcut in
                             settings.updateShortcut(for: quickSlotAction, shortcut: newShortcut)
-                            NotificationCenter.default.post(name: .shortcutsChanged, object: nil)
+                            NotificationCenter.default.post(name: NotificationNames.shortcutsChanged, object: nil)
                             editingShortcut = nil
                         }
                     ),

@@ -2,24 +2,26 @@
 //  AppDelegate.swift
 //  Promptlet
 //
-//  Created by Josh Cohenzadeh on 8/29/25.
+//  Refactored to use service-based architecture for better maintainability
 //
 
 import Cocoa
 import SwiftUI
 
-extension Notification.Name {
-    static let shortcutsChanged = Notification.Name("shortcutsChanged")
-}
-
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
-    // MARK: - Core Data & Controllers
+    
+    // MARK: - Core Components
     var promptStore: PromptStore = PromptStore()
-    var paletteController: PaletteController!
     let appSettings = AppSettings()
     
+    // MARK: - Service Coordination
+    private var serviceCoordinator: ServiceCoordinator!
+    private var diagnosticService: DiagnosticService!
+    private var appSetupService: AppSetupService!
+    
     // MARK: - Controllers
+    private var paletteController: PaletteController!
     private var menuBarController: MenuBarController!
     private var keyboardController: KeyboardController!
     private var windowController: WindowController!
@@ -33,207 +35,90 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         logInfo(.app, "Application launched")
         
-        // Initialize core components
-        paletteController = PaletteController(store: promptStore)
-        appSettings.applyTheme()
-        appSettings.incrementLaunchCount()
-        logInfo(.app, "Core components initialized")
-        
-        // Initialize services
+        initializeServices()
+        initializeControllers()
+        setupServiceCoordination()
+        performApplicationSetup()
+    }
+    
+    private func initializeServices() {
+        // Core services
         textInsertionService = TextInsertionService()
         windowManagementService = WindowManagementService()
         onboardingService = OnboardingService(settings: appSettings, promptStore: promptStore)
         permissionService = PermissionManager.shared
-        logInfo(.app, "Services initialized")
         
-        // Initialize controllers
+        // Coordination services
+        serviceCoordinator = ServiceCoordinator(promptStore: promptStore, appSettings: appSettings)
+        diagnosticService = DiagnosticService()
+        appSetupService = AppSetupService()
+        
+        logInfo(.app, "Services initialized")
+    }
+    
+    private func initializeControllers() {
+        paletteController = PaletteController(store: promptStore)
         menuBarController = MenuBarController(delegate: self, promptStore: promptStore, appSettings: appSettings)
         keyboardController = KeyboardController(delegate: self, appSettings: appSettings)
         windowController = WindowController(delegate: self)
+        
         logInfo(.app, "Controllers initialized")
-        
-        // Handle onboarding and permissions
-        if onboardingService.isOnboardingNeeded {
-            onboardingService.showOnboarding { [weak self] in
-                self?.setupPostOnboarding()
-            }
-        } else {
-            logInfo(.onboarding, "Onboarding already completed, setting up permissions")
-            setupPostOnboarding()
-        }
-        
-        // Listen for shortcut changes
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(shortcutsDidChange),
-            name: .shortcutsChanged,
-            object: nil
+    }
+    
+    private func setupServiceCoordination() {
+        // Register all components with the service coordinator
+        serviceCoordinator.registerControllers(
+            paletteController: paletteController,
+            menuBarController: menuBarController,
+            keyboardController: keyboardController,
+            windowController: windowController
         )
         
-        NSApp.setActivationPolicy(.accessory)
+        serviceCoordinator.registerServices(
+            textInsertionService: textInsertionService,
+            windowManagementService: windowManagementService,
+            onboardingService: onboardingService,
+            permissionService: permissionService,
+            appSetupService: appSetupService
+        )
         
-        // Setup onboarding test notifications
-        onboardingService.handleTestNotifications()
-        setupTestNotificationHandlers()
+        // Register diagnostic service
+        diagnosticService.registerServices(
+            keyboardController: keyboardController,
+            permissionService: permissionService
+        )
+        
+        logInfo(.app, "Service coordination setup completed")
+    }
+    
+    private func performApplicationSetup() {
+        appSetupService.performApplicationSetup(
+            promptStore: promptStore,
+            appSettings: appSettings,
+            onboardingService: onboardingService,
+            permissionService: permissionService
+        ) { [weak self] in
+            self?.completeSetup()
+        }
+    }
+    
+    private func completeSetup() {
+        keyboardController.setupGlobalHotkey()
+        
+        // Show the palette for the first time after setup
+        DispatchQueue.main.asyncAfter(deadline: .now() + Timing.focusRestoreDelay) { [weak self] in
+            self?.serviceCoordinator.showPalette()
+        }
         
         logSuccess(.app, "Application setup completed successfully")
     }
     
-    private func setupPostOnboarding() {
-        permissionService.requestAccessibilityPermissions()
-        keyboardController.setupGlobalHotkey()
-        
-        // Set up integration between permission manager and keyboard controller
-        setupPermissionIntegration()
-        
-        // Show the palette for the first time after onboarding
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.showPalette()
-        }
-    }
-    
-    private func setupPermissionIntegration() {
-        // Add callback to re-register keyboard monitors when accessibility permission changes
-        if let permissionManager = permissionService {
-            permissionManager.addPermissionChangeCallback { [weak self] hasPermission in
-                logInfo(.permission, "Permission change callback triggered: \(hasPermission)")
-                if hasPermission {
-                    logInfo(.keyboard, "Accessibility permission restored, re-registering monitors")
-                    self?.keyboardController.forceReregisterMonitors()
-                } else {
-                    logWarning(.keyboard, "Accessibility permission lost, monitors may not work")
-                }
-            }
-            
-            // Start monitoring permissions
-            permissionManager.startMonitoringPermissions()
-        }
-    }
-    
-    private func setupTestNotificationHandlers() {
-        NotificationCenter.default.addObserver(
-            forName: Notification.Name("TestShowPalette"),
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.showPalette()
-            }
-        }
-        
-        NotificationCenter.default.addObserver(
-            forName: Notification.Name("TestHidePalette"),
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.hidePalette()
-            }
-        }
-    }
-    
-    @objc func showPalette() {
-        // Toggle palette visibility - only hide if it's actually frontmost
-        if windowController.isPaletteFrontmost() {
-            logDebug(.ui, "Hiding palette (toggle)")
-            hidePalette()
-            return
-        }
-        
-        logDebug(.ui, "Showing palette")
-        
-        // Save the currently active app before showing palette
-        let currentApp = NSWorkspace.shared.frontmostApplication
-        textInsertionService.setPreviousApp(currentApp)
-        
-        if !windowController.isPaletteVisible() {
-            createPaletteWindow()
-        }
-        
-        // Reset controller and clear search
-        paletteController.reset()
-        promptStore.searchText = ""
-        
-        windowController.showPalette(appSettings: appSettings)
-        keyboardController.startPaletteKeyboardMonitoring()
-    }
-    
-    private func createPaletteWindow() {
-        let paletteView = PaletteView(
-            store: promptStore,
-            controller: paletteController,
-            appSettings: appSettings,
-            onInsert: { [weak self] prompt in
-                self?.insertPrompt(prompt)
-            },
-            onDismiss: { [weak self] in
-                self?.hidePalette()
-            },
-            onNewPrompt: { [weak self] in
-                self?.keyboardNewPrompt()
-            }
-        )
-        
-        windowController.createPaletteWindow(view: paletteView, appSettings: appSettings)
-    }
-    
-    func hidePalette() {
-        logDebug(.ui, "Hiding palette")
-        windowController.hidePalette(animated: appSettings.enableAnimations)
-        keyboardController.stopPaletteKeyboardMonitoring()
-    }
-    
-    private func insertPrompt(_ prompt: Prompt) {
-        // Hide palette first to release focus
-        hidePalette()
-        
-        // Use service to handle text insertion
-        textInsertionService.insertPrompt(prompt) { [weak self] in
-            // Record usage and show feedback
-            self?.promptStore.recordUsage(for: prompt.id)
-            self?.menuBarController.showInsertedFeedback()
-        }
-    }
-    
-    private func showPromptEditor(for prompt: Prompt, isNew: Bool = false) {
-        // Hide palette if visible
-        if windowController.isPaletteVisible() {
-            hidePalette()
-        }
-        
-        logInfo(.prompt, isNew ? "Opening editor for new prompt" : "Opening editor for existing prompt: \(prompt.title)")
-        
-        windowManagementService.showPromptEditor(
-            for: prompt,
-            onSave: { [weak self] updatedPrompt in
-                if isNew {
-                    self?.promptStore.addPrompt(updatedPrompt)
-                    logSuccess(.prompt, "New prompt created and saved: \(updatedPrompt.title)")
-                } else {
-                    self?.promptStore.updatePrompt(updatedPrompt)
-                    logInfo(.prompt, "Existing prompt updated: \(updatedPrompt.title)")
-                }
-                self?.windowManagementService.closePromptEditor()
-            },
-            onCancel: {
-                if isNew {
-                    logInfo(.prompt, "New prompt creation cancelled - no prompt saved")
-                } else {
-                    logInfo(.prompt, "Edit cancelled for prompt: \(prompt.title)")
-                }
-            }
-        )
-    }
-    
-    @objc private func shortcutsDidChange() {
-        logInfo(.keyboard, "Keyboard shortcuts changed, reloading...")
-        keyboardController.reloadShortcuts()
-        menuBarController.createMenu()
-    }
+    // MARK: - Cleanup
     
     func applicationWillTerminate(_ notification: Notification) {
         logInfo(.app, "Application terminating, cleaning up resources")
-        keyboardController.cleanup()
+        serviceCoordinator.cleanup()
+        appSetupService.cleanup()
         NotificationCenter.default.removeObserver(self)
     }
 }
@@ -242,164 +127,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension AppDelegate: MenuBarDelegate {
     func menuBarShowPalette() {
-        showPalette()
+        serviceCoordinator.showPalette()
     }
     
     func menuBarQuickAddFromClipboard() {
-        logInfo(.prompt, "Quick add from clipboard initiated")
-        
-        guard let content = NSPasteboard.general.string(forType: .string) else {
-            logWarning(.prompt, "No text in clipboard for quick add")
-            return
-        }
-        
-        let prompt = Prompt(
-            title: "New Prompt",
-            content: content,
-            tags: [],
-            defaultEnhancement: Enhancement()
-        )
-        
-        // Don't add to store yet - wait for user to save
-        showPromptEditor(for: prompt, isNew: true)
+        serviceCoordinator.quickAddFromClipboard()
     }
     
     func menuBarInsertRecentPrompt(_ promptId: UUID) {
         guard let prompt = promptStore.prompts.first(where: { $0.id == promptId }) else {
             return
         }
-        
-        logInfo(.prompt, "Inserting recent prompt: \(prompt.title)")
-        insertPrompt(prompt)
+        serviceCoordinator.insertPrompt(prompt)
     }
     
     func menuBarInsertQuickSlotPrompt(_ promptId: UUID) {
         guard let prompt = promptStore.prompts.first(where: { $0.id == promptId }) else {
             return
         }
-        
-        logInfo(.prompt, "Inserting quick slot prompt from menu: \(prompt.title)")
-        insertPrompt(prompt)
+        serviceCoordinator.insertPrompt(prompt)
     }
     
     func menuBarOpenSettings() {
-        windowManagementService.showSettingsWindow(with: appSettings, promptStore: promptStore)
+        serviceCoordinator.showSettings()
     }
     
     func menuBarResetWindowPosition() {
-        appSettings.resetWindowPosition()
-        menuBarController.showResetFeedback()
-        logInfo(.window, "Reset window position")
+        serviceCoordinator.resetWindowPosition()
     }
     
-    // MARK: - Diagnostic Menu Methods
+    // MARK: - Diagnostic Menu Methods (delegated to DiagnosticService)
     
     func menuBarShowShortcutStatus() {
-        let status = keyboardController.getHealthStatus()
-        let shortcut = appSettings.getShortcut(for: .showPalette)?.displayString ?? "Not configured"
-        
-        let alert = NSAlert()
-        alert.messageText = "Keyboard Shortcut Status"
-        alert.informativeText = """
-        Current Shortcut: \(shortcut)
-        Monitor Status: \(status)
-        
-        If the shortcut isn't working:
-        • Try using "Reset Shortcuts" from this menu
-        • Check that Accessibility permissions are granted
-        • Restart the app if issues persist
-        """
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        diagnosticService.showShortcutStatus(appSettings: appSettings)
     }
     
     func menuBarShowPermissionStatus() {
-        if let permissionManager = permissionService {
-            let status = permissionManager.getDetailedStatus()
-            
-            let alert = NSAlert()
-            alert.messageText = "Permission Status"
-            alert.informativeText = """
-            \(status)
-            
-            Promptlet requires Accessibility permission to:
-            • Capture global keyboard shortcuts
-            • Insert text at cursor position
-            • Switch between applications
-            
-            If permissions are missing, click "Grant Permissions" to open System Preferences.
-            """
-            alert.alertStyle = .informational
-            
-            if !permissionManager.allPermissionsGranted {
-                alert.addButton(withTitle: "Grant Permissions")
-                alert.addButton(withTitle: "Cancel")
-                
-                let response = alert.runModal()
-                if response == .alertFirstButtonReturn {
-                    permissionManager.showPermissionInstructions()
-                }
-            } else {
-                alert.addButton(withTitle: "OK")
-                alert.runModal()
-            }
-        }
+        diagnosticService.showPermissionStatus()
     }
     
     func menuBarResetShortcuts() {
-        let alert = NSAlert()
-        alert.messageText = "Reset Keyboard Shortcuts"
-        alert.informativeText = "This will re-register the global keyboard shortcut monitors. This can help if shortcuts have stopped working."
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Reset")
-        alert.addButton(withTitle: "Cancel")
-        
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            logInfo(.keyboard, "User triggered shortcut reset from menu")
-            keyboardController.forceReregisterMonitors()
-            
-            // Show confirmation
-            let confirmAlert = NSAlert()
-            confirmAlert.messageText = "Shortcuts Reset"
-            confirmAlert.informativeText = "Keyboard shortcuts have been reset. Try using your global shortcut now."
-            confirmAlert.alertStyle = .informational
-            confirmAlert.addButton(withTitle: "OK")
-            confirmAlert.runModal()
-        }
+        diagnosticService.resetShortcuts()
     }
     
     func menuBarShowDebugLogs() {
-        let logs = LogService.shared.getLogsAsString()
-        
-        // Create a temporary file with the logs
-        let tempDir = FileManager.default.temporaryDirectory
-        let logFile = tempDir.appendingPathComponent("promptlet_debug_logs.txt")
-        
-        do {
-            try logs.write(to: logFile, atomically: true, encoding: .utf8)
-            NSWorkspace.shared.open(logFile)
-            logInfo(.app, "Debug logs exported and opened")
-        } catch {
-            logError(.app, "Failed to export debug logs: \\(error)")
-            
-            // Fallback: show logs in alert
-            let alert = NSAlert()
-            alert.messageText = "Debug Logs"
-            alert.informativeText = "Recent logs (last 50 lines):"
-            
-            let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 500, height: 300))
-            let textView = NSTextView(frame: scrollView.bounds)
-            textView.string = String(logs.split(separator: "\\n").suffix(50).joined(separator: "\\n"))
-            textView.isEditable = false
-            textView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
-            scrollView.documentView = textView
-            
-            alert.accessoryView = scrollView
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
-        }
+        diagnosticService.showDebugLogs()
     }
 }
 
@@ -407,51 +179,31 @@ extension AppDelegate: MenuBarDelegate {
 
 extension AppDelegate: KeyboardControllerDelegate {
     func keyboardShowPalette() {
-        showPalette()
+        serviceCoordinator.showPalette()
     }
     
     func keyboardHidePalette() {
-        hidePalette()
+        serviceCoordinator.hidePalette()
     }
     
     func keyboardNavigateUp() {
-        paletteController.navigateUp()
+        serviceCoordinator.navigateUp()
     }
     
     func keyboardNavigateDown() {
-        paletteController.navigateDown()
+        serviceCoordinator.navigateDown()
     }
     
     func keyboardQuickSlot(_ slot: Int) {
-        if let prompt = promptStore.quickSlotPrompts[slot] {
-            // Use direct insertion for quick slots - no app switching or palette hiding
-            textInsertionService.insertPromptDirectly(prompt) { [weak self] in
-                // Record usage and show feedback
-                self?.promptStore.recordUsage(for: prompt.id)
-                self?.menuBarController.showInsertedFeedback()
-            }
-        }
+        serviceCoordinator.selectQuickSlot(slot)
     }
     
     func keyboardNewPrompt() {
-        logInfo(.keyboard, "New prompt creation initiated")
-        
-        // Get clipboard content if available
-        let content = NSPasteboard.general.string(forType: .string) ?? ""
-        
-        let prompt = Prompt(
-            title: "New Prompt",
-            content: content,
-            tags: [],
-            defaultEnhancement: Enhancement()
-        )
-        
-        // Don't add to store yet - wait for user to save
-        showPromptEditor(for: prompt, isNew: true)
+        serviceCoordinator.createNewPrompt()
     }
     
     func isPaletteVisible() -> Bool {
-        return windowController.isPaletteVisible()
+        return serviceCoordinator.isPaletteVisible()
     }
 }
 
@@ -459,6 +211,7 @@ extension AppDelegate: KeyboardControllerDelegate {
 
 extension AppDelegate: WindowControllerDelegate {
     func windowDidMove() {
-        // Could refresh menu or perform other actions if needed
+        // Window position is handled by the WindowController itself
+        // No additional action needed from AppDelegate
     }
 }
