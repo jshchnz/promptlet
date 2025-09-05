@@ -37,6 +37,7 @@ class MenuBarController: NSObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.updateMenuBarVisibility()
+                self?.updateMenuBarIcon()
                 self?.createMenu() // Refresh menu when settings change
             }
         }
@@ -75,23 +76,48 @@ class MenuBarController: NSObject {
         }
     }
     
+    private func updateMenuBarIcon() {
+        guard let settings = appSettings,
+              settings.showMenuBarIcon,
+              let button = statusItem?.button else { return }
+        
+        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
+        let selectedIconName = settings.selectedMenuBarIcon.systemImageName
+        
+        if let image = NSImage(systemSymbolName: selectedIconName, accessibilityDescription: "Promptlet") {
+            button.image = image.withSymbolConfiguration(config)
+            button.title = "" // Clear any fallback title
+        } else if let image = NSImage(systemSymbolName: "text.quote", accessibilityDescription: "Promptlet") {
+            // Fallback to default icon
+            button.image = image.withSymbolConfiguration(config)
+            button.title = ""
+        } else if let image = NSImage(systemSymbolName: "command", accessibilityDescription: "Promptlet") {
+            // Second fallback to command symbol
+            button.image = image.withSymbolConfiguration(config)
+            button.title = ""
+        } else {
+            // Last fallback to text
+            button.image = nil
+            button.title = "⌘."
+        }
+    }
+    
     private func setupMenuBar() {
         guard appSettings?.showMenuBarIcon == true else { return }
         
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            // Good SF Symbol options for a prompt/snippet manager:
-            // "text.quote" - quotation marks, good for text snippets
-            // "command" - clean command key symbol
-            // "doc.text" - document with text
-            // "rectangle.and.text.magnifyingglass" - search text
-            // "text.bubble" - speech/text bubble
             let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
-            if let image = NSImage(systemSymbolName: "text.quote", accessibilityDescription: "Promptlet") {
+            let selectedIconName = appSettings?.selectedMenuBarIcon.systemImageName ?? "text.quote"
+            
+            if let image = NSImage(systemSymbolName: selectedIconName, accessibilityDescription: "Promptlet") {
+                button.image = image.withSymbolConfiguration(config)
+            } else if let image = NSImage(systemSymbolName: "text.quote", accessibilityDescription: "Promptlet") {
+                // Fallback to default icon
                 button.image = image.withSymbolConfiguration(config)
             } else if let image = NSImage(systemSymbolName: "command", accessibilityDescription: "Promptlet") {
-                // Fallback to command symbol
+                // Second fallback to command symbol
                 button.image = image.withSymbolConfiguration(config)
             } else {
                 // Last fallback to text
@@ -122,13 +148,22 @@ class MenuBarController: NSObject {
             
             for slot in 1...slotsToShow {
                 if let prompt = quickSlots[slot] {
-                    let shortcutKey = String(slot)
+                    // Get the actual configured shortcut for this slot
+                    let shortcutAction = getShortcutAction(for: slot)
+                    let configuredShortcut = shortcutAction != nil ? settings.getShortcut(for: shortcutAction!) : nil
+                    
                     let item = NSMenuItem(
                         title: prompt.title,
                         action: #selector(insertQuickSlotPrompt(_:)),
-                        keyEquivalent: shortcutKey
+                        keyEquivalent: ""
                     )
-                    item.keyEquivalentModifierMask = [.command]
+                    
+                    // Set the actual shortcut if configured
+                    if let shortcut = configuredShortcut {
+                        item.keyEquivalent = keyEquivalentString(for: shortcut.keyCode)
+                        item.keyEquivalentModifierMask = nsEventModifierFlags(from: shortcut.modifierFlags)
+                    }
+                    
                     item.representedObject = prompt.id
                     item.target = self
                     menu.addItem(item)
@@ -173,37 +208,6 @@ class MenuBarController: NSObject {
         settingsItem.target = self
         menu.addItem(settingsItem)
         
-        let resetPositionItem = NSMenuItem(title: "Reset Window Position", action: #selector(resetWindowPosition), keyEquivalent: "")
-        resetPositionItem.target = self
-        menu.addItem(resetPositionItem)
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        // Diagnostics submenu
-        let diagnosticsSubmenu = NSMenu()
-        
-        let shortcutStatusItem = NSMenuItem(title: "Shortcut Status", action: #selector(showShortcutStatus), keyEquivalent: "")
-        shortcutStatusItem.target = self
-        diagnosticsSubmenu.addItem(shortcutStatusItem)
-        
-        let permissionStatusItem = NSMenuItem(title: "Permission Status", action: #selector(showPermissionStatus), keyEquivalent: "")
-        permissionStatusItem.target = self
-        diagnosticsSubmenu.addItem(permissionStatusItem)
-        
-        let resetShortcutsItem = NSMenuItem(title: "Reset Shortcuts", action: #selector(resetShortcuts), keyEquivalent: "")
-        resetShortcutsItem.target = self
-        diagnosticsSubmenu.addItem(resetShortcutsItem)
-        
-        diagnosticsSubmenu.addItem(NSMenuItem.separator())
-        
-        let showLogsItem = NSMenuItem(title: "Show Debug Logs", action: #selector(showDebugLogs), keyEquivalent: "")
-        showLogsItem.target = self
-        diagnosticsSubmenu.addItem(showLogsItem)
-        
-        let diagnosticsItem = NSMenuItem(title: "Diagnostics", action: nil, keyEquivalent: "")
-        diagnosticsItem.submenu = diagnosticsSubmenu
-        menu.addItem(diagnosticsItem)
-        
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit Promptlet", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
@@ -239,26 +243,72 @@ class MenuBarController: NSObject {
         delegate?.menuBarOpenSettings()
     }
     
-    @objc private func resetWindowPosition() {
-        delegate?.menuBarResetWindowPosition()
+    // MARK: - Helper Methods
+    
+    private func getShortcutAction(for slot: Int) -> ShortcutAction? {
+        switch slot {
+        case 1: return .quickSlot1
+        case 2: return .quickSlot2
+        case 3: return .quickSlot3
+        case 4: return .quickSlot4
+        case 5: return .quickSlot5
+        case 6: return .quickSlot6
+        case 7: return .quickSlot7
+        case 8: return .quickSlot8
+        case 9: return .quickSlot9
+        default: return nil
+        }
     }
     
-    // MARK: - Diagnostic Actions
-    
-    @objc private func showShortcutStatus() {
-        delegate?.menuBarShowShortcutStatus()
+    private func keyEquivalentString(for keyCode: UInt16) -> String {
+        switch keyCode {
+        case 18: return "1"
+        case 19: return "2"
+        case 20: return "3"
+        case 21: return "4"
+        case 23: return "5"
+        case 22: return "6"
+        case 26: return "7"
+        case 28: return "8"
+        case 25: return "9"
+        case 29: return "0"
+        case 12: return "q"
+        case 13: return "w"
+        case 14: return "e"
+        case 15: return "r"
+        case 17: return "t"
+        case 16: return "y"
+        case 32: return "u"
+        case 34: return "i"
+        case 31: return "o"
+        case 35: return "p"
+        case 0: return "a"
+        case 1: return "s"
+        case 2: return "d"
+        case 3: return "f"
+        case 5: return "g"
+        case 4: return "h"
+        case 38: return "j"
+        case 40: return "k"
+        case 37: return "l"
+        case 6: return "z"
+        case 7: return "x"
+        case 8: return "c"
+        case 9: return "v"
+        case 11: return "b"
+        case 45: return "n"
+        case 46: return "m"
+        case 47: return "."
+        case 44: return ","
+        case 36: return "\r" // Return
+        case 53: return "\u{1b}" // Escape
+        case 49: return " " // Space
+        default: return ""
+        }
     }
     
-    @objc private func showPermissionStatus() {
-        delegate?.menuBarShowPermissionStatus()
-    }
-    
-    @objc private func resetShortcuts() {
-        delegate?.menuBarResetShortcuts()
-    }
-    
-    @objc private func showDebugLogs() {
-        delegate?.menuBarShowDebugLogs()
+    private func nsEventModifierFlags(from modifierFlags: UInt) -> NSEvent.ModifierFlags {
+        return NSEvent.ModifierFlags(rawValue: modifierFlags)
     }
     
     func showInsertedFeedback() {
@@ -299,11 +349,4 @@ protocol MenuBarDelegate: AnyObject {
     func menuBarInsertRecentPrompt(_ promptId: UUID)
     func menuBarInsertQuickSlotPrompt(_ promptId: UUID)
     func menuBarOpenSettings()
-    func menuBarResetWindowPosition()
-    
-    // Diagnostic methods
-    func menuBarShowShortcutStatus()
-    func menuBarShowPermissionStatus()
-    func menuBarResetShortcuts()
-    func menuBarShowDebugLogs()
 }

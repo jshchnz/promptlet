@@ -31,13 +31,6 @@ struct SettingsView: View {
                 )
                 
                 ToolbarButton(
-                    title: "Appearance",
-                    icon: "paintbrush",
-                    tag: "appearance",
-                    selection: $selectedTab
-                )
-                
-                ToolbarButton(
                     title: "Organization",
                     icon: "folder",
                     tag: "organization",
@@ -72,8 +65,6 @@ struct SettingsView: View {
                     GeneralSettingsTab(settings: settings)
                 case "keyboard":
                     KeyboardSettingsTab(settings: settings)
-                case "appearance":
-                    AppearanceSettingsTab(settings: settings)
                 case "organization":
                     OrganizationSettingsTab(settings: settings, promptStore: promptStore)
                 case "quickslots":

@@ -329,10 +329,18 @@ class ServiceCoordinator: ObservableObject {
     }
     
     func selectQuickSlot(_ slot: Int) {
-        if let prompt = promptStore.quickSlotPrompts[slot] {
+        logInfo(.keyboard, "Quick slot \(slot) selection initiated")
+        
+        let quickSlots = promptStore.quickSlotPrompts
+        logDebug(.keyboard, "Available quick slots: \(quickSlots.keys.sorted())")
+        
+        if let prompt = quickSlots[slot] {
+            logInfo(.keyboard, "Found prompt for quick slot \(slot): '\(prompt.title)'")
             trackAnalytics(.quickSlotUsed, properties: ["slot": slot])
             trackPromptAction(.promptInserted, promptId: prompt.id, method: "quick_slot")
             insertPromptDirectly(prompt)
+        } else {
+            logWarning(.keyboard, "No prompt found for quick slot \(slot)")
         }
     }
     

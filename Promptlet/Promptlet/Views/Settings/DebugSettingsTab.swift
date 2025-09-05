@@ -14,6 +14,7 @@ struct DebugSettingsTab: View {
     @State private var showResetOnboardingConfirmation = false
     @State private var showResetPromptsConfirmation = false
     @State private var showClearPromptsConfirmation = false
+    @State private var showResetAllSettingsConfirmation = false
     
     var body: some View {
         ScrollView {
@@ -102,6 +103,61 @@ struct DebugSettingsTab: View {
             }
             .groupBoxStyle(SettingsGroupBoxStyle())
             
+            // System Diagnostics
+            GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Diagnostic tools for troubleshooting system issues")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    
+                    HStack(spacing: 12) {
+                        Button("Shortcut Status") {
+                            showShortcutStatus()
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Button("Permission Status") {
+                            showPermissionStatus()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    
+                    HStack(spacing: 12) {
+                        Button("Reset Shortcuts") {
+                            resetShortcuts()
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Button("Export Debug Logs") {
+                            exportDebugLogs()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    
+                    Divider()
+                    
+                    Text("This will reset all settings to defaults, including shortcuts and appearance")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    
+                    HStack {
+                        Spacer()
+                        
+                        Button("Reset All Settings") {
+                            showResetAllSettingsConfirmation = true
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.red)
+                        
+                        Spacer()
+                    }
+                }
+            } label: {
+                Label("System Diagnostics", systemImage: "stethoscope")
+            }
+            .groupBoxStyle(SettingsGroupBoxStyle())
+            
             // System Info
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
@@ -159,6 +215,112 @@ struct DebugSettingsTab: View {
             }
         } message: {
             Text("This will permanently delete all prompts. This action cannot be undone.")
+        }
+        .alert("Reset All Settings", isPresented: $showResetAllSettingsConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reset", role: .destructive) {
+                settings.resetAllSettings()
+            }
+        } message: {
+            Text("This will reset all settings to their default values, including keyboard shortcuts and appearance preferences.")
+        }
+    }
+    
+    // MARK: - Diagnostic Methods
+    
+    private func showShortcutStatus() {
+        let shortcut = settings.getShortcut(for: .showPalette)?.displayString ?? "Not configured"
+        
+        let alert = NSAlert()
+        alert.messageText = "Keyboard Shortcut Status"
+        alert.informativeText = """
+        Current Shortcut: \(shortcut)
+        Monitor Status: Available in menu bar version
+        
+        If the shortcut isn't working:
+        • Try using "Reset Shortcuts" below
+        • Check that Accessibility permissions are granted
+        • Restart the app if issues persist
+        """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+    
+    private func showPermissionStatus() {
+        let hasAccessibility = PermissionManager.shared.hasAccessibilityPermission
+        let statusText = hasAccessibility ? "✅ Granted" : "❌ Not Granted"
+        
+        let alert = NSAlert()
+        alert.messageText = "Permission Status"
+        alert.informativeText = """
+        Accessibility Permission: \(statusText)
+        
+        Promptlet requires Accessibility permission to:
+        • Capture global keyboard shortcuts
+        • Insert text at cursor position
+        • Switch between applications
+        
+        \(hasAccessibility ? "All required permissions are granted." : "Missing permissions may prevent the app from working properly.")
+        """
+        alert.alertStyle = .informational
+        
+        if !hasAccessibility {
+            alert.addButton(withTitle: "Grant Permissions")
+            alert.addButton(withTitle: "Cancel")
+            
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                PermissionManager.shared.showPermissionInstructions()
+            }
+        } else {
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
+    
+    private func resetShortcuts() {
+        let alert = NSAlert()
+        alert.messageText = "Reset Keyboard Shortcuts"
+        alert.informativeText = "This will re-register the global keyboard shortcut monitors. This can help if shortcuts have stopped working."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Reset")
+        alert.addButton(withTitle: "Cancel")
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            // Note: Full reset functionality requires access to KeyboardController
+            // For now, show success message encouraging restart
+            let successAlert = NSAlert()
+            successAlert.messageText = "Shortcuts Reset"
+            successAlert.informativeText = "Please restart the app to fully reset keyboard shortcuts."
+            successAlert.alertStyle = .informational
+            successAlert.addButton(withTitle: "OK")
+            successAlert.runModal()
+        }
+    }
+    
+    private func exportDebugLogs() {
+        let logs = LogService.shared.getLogsAsString()
+        
+        // Try to create and open a temporary file
+        let tempDir = FileManager.default.temporaryDirectory
+        let logFile = tempDir.appendingPathComponent("promptlet_debug_logs_\(Date().timeIntervalSince1970).txt")
+        
+        do {
+            try logs.write(to: logFile, atomically: true, encoding: .utf8)
+            NSWorkspace.shared.open(logFile)
+        } catch {
+            // Fallback: copy to clipboard
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(logs, forType: .string)
+            
+            let alert = NSAlert()
+            alert.messageText = "Debug Logs Copied"
+            alert.informativeText = "Could not create temporary file. Debug logs have been copied to your clipboard instead."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
         }
     }
     

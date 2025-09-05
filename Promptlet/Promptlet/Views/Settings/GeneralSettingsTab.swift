@@ -10,12 +10,10 @@ import SwiftUI
 struct GeneralSettingsTab: View {
     @ObservedObject var settings: AppSettings
     @State private var showResetConfirmation = false
-    @State private var showResetAllConfirmation = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
                     // Palette Window Settings
                     GroupBox {
                         VStack(alignment: .leading, spacing: 12) {
@@ -50,6 +48,76 @@ struct GeneralSettingsTab: View {
                         Label("Palette Window", systemImage: "rectangle.stack")
                     }
                     .groupBoxStyle(SettingsGroupBoxStyle())
+                
+                // Theme Settings
+                GroupBox {
+                VStack(alignment: .leading, spacing: 16) {
+                    LabeledContent("Appearance:") {
+                        Picker("", selection: $settings.themeMode) {
+                            ForEach(ThemeMode.allCases, id: \.rawValue) { mode in
+                                Text(mode.rawValue).tag(mode.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 250)
+                    }
+                    
+                    Text("Promptlet automatically adjusts to match your system appearance")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            } label: {
+                Label("Theme", systemImage: "circle.lefthalf.filled")
+            }
+            .groupBoxStyle(SettingsGroupBoxStyle())
+            
+            // Visual Effects
+            GroupBox {
+                VStack(alignment: .leading, spacing: 16) {
+                    Toggle("Enable window animations", isOn: $settings.enableAnimations)
+                    
+                    Text("Smooth fade and scale animations when showing/hiding windows")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    
+                    Divider()
+                    
+                    Toggle("Show menu bar icon", isOn: $settings.showMenuBarIcon)
+                    
+                    Text("Display Promptlet icon in the menu bar for quick access")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    
+                    if settings.showMenuBarIcon {
+                        Divider()
+                        
+                        LabeledContent("Menu bar icon:") {
+                            Picker("", selection: Binding(
+                                get: { settings.selectedMenuBarIcon },
+                                set: { settings.selectedMenuBarIcon = $0 }
+                            )) {
+                                ForEach(MenuBarIcon.allCases, id: \.rawValue) { icon in
+                                    HStack {
+                                        Image(systemName: icon.systemImageName)
+                                            .frame(width: 16)
+                                        Text(icon.displayName)
+                                    }
+                                    .tag(icon)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 180)
+                        }
+                        
+                        Text("Choose which icon appears in your menu bar")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            } label: {
+                Label("Visual Effects", systemImage: "sparkles")
+            }
+            .groupBoxStyle(SettingsGroupBoxStyle())
             
             // App Information
             GroupBox {
@@ -74,22 +142,9 @@ struct GeneralSettingsTab: View {
             }
             .groupBoxStyle(SettingsGroupBoxStyle())
             
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 20)
             }
-            
-            // Reset Options (fixed at bottom)
-            HStack {
-                Spacer()
-                
-                Button("Reset All Settings") {
-                    showResetAllConfirmation = true
-                }
-                .controlSize(.regular)
-                .buttonStyle(.bordered)
-            }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
         }
         .alert("Clear Saved Position", isPresented: $showResetConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -98,14 +153,6 @@ struct GeneralSettingsTab: View {
             }
         } message: {
             Text("The palette will return to the default position next time it opens.")
-        }
-        .alert("Reset All Settings", isPresented: $showResetAllConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Reset", role: .destructive) {
-                settings.resetAllSettings()
-            }
-        } message: {
-            Text("This will reset all settings to their default values, including keyboard shortcuts and appearance preferences.")
         }
     }
 }

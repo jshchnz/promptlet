@@ -62,17 +62,31 @@ class KeyboardController: NSObject {
                     return
                 }
                 
-                // Skip events without modifiers (performance optimization)
+                // Log all keyboard events with modifiers for debugging
                 let relevantFlags: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
                 let hasModifiers = !event.modifierFlags.intersection(relevantFlags).isEmpty
+                
+                if hasModifiers {
+                    logDebug(.keyboard, "Global key event: keyCode=\(event.keyCode), modifiers=\(event.modifierFlags.rawValue)")
+                }
+                
                 if !hasModifiers {
                     return
                 }
                 
                 // Check quick slot shortcuts (only when palette is NOT visible)
-                guard let delegate = self.delegate, !delegate.isPaletteVisible() else { 
+                guard let delegate = self.delegate else { 
+                    logWarning(.keyboard, "No delegate available for quick slots")
                     return 
                 }
+                
+                let paletteVisible = delegate.isPaletteVisible()
+                if paletteVisible {
+                    logDebug(.keyboard, "Palette is visible, skipping quick slot check")
+                    return
+                }
+                
+                logDebug(.keyboard, "Checking quick slot shortcuts for key event")
                 
                 let quickSlotActions: [(ShortcutAction, Int)] = [
                     (.quickSlot1, 1), (.quickSlot2, 2), (.quickSlot3, 3),
@@ -81,11 +95,15 @@ class KeyboardController: NSObject {
                 ]
                 
                 for (action, slot) in quickSlotActions {
-                    if let shortcut = self.appSettings.getShortcut(for: action),
-                       shortcut.matches(event: event) {
-                        logDebug(.keyboard, "Quick slot \(slot) triggered: \(shortcut.displayString)")
-                        delegate.keyboardQuickSlot(slot)
-                        return
+                    if let shortcut = self.appSettings.getShortcut(for: action) {
+                        logDebug(.keyboard, "Checking quick slot \(slot) shortcut: \(shortcut.displayString) against event: \(event.keyCode), modifiers: \(event.modifierFlags.rawValue)")
+                        if shortcut.matches(event: event) {
+                            logInfo(.keyboard, "Quick slot \(slot) triggered: \(shortcut.displayString)")
+                            delegate.keyboardQuickSlot(slot)
+                            return
+                        }
+                    } else {
+                        logDebug(.keyboard, "No shortcut configured for quick slot \(slot)")
                     }
                 }
             }
@@ -124,17 +142,31 @@ class KeyboardController: NSObject {
                     return event
                 }
                 
-                // Skip events without modifiers (performance optimization)
+                // Log all keyboard events with modifiers for debugging
                 let relevantFlags: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
                 let hasModifiers = !event.modifierFlags.intersection(relevantFlags).isEmpty
+                
+                if hasModifiers {
+                    logDebug(.keyboard, "Local key event: keyCode=\(event.keyCode), modifiers=\(event.modifierFlags.rawValue)")
+                }
+                
                 if !hasModifiers {
                     return event
                 }
                 
                 // Check quick slot shortcuts (only when palette is NOT visible)
-                guard let delegate = self.delegate, !delegate.isPaletteVisible() else { 
+                guard let delegate = self.delegate else { 
+                    logWarning(.keyboard, "No delegate available for quick slots")
                     return event 
                 }
+                
+                let paletteVisible = delegate.isPaletteVisible()
+                if paletteVisible {
+                    logDebug(.keyboard, "Palette is visible, skipping quick slot check")
+                    return event
+                }
+                
+                logDebug(.keyboard, "Checking quick slot shortcuts for key event")
                 
                 let quickSlotActions: [(ShortcutAction, Int)] = [
                     (.quickSlot1, 1), (.quickSlot2, 2), (.quickSlot3, 3),
@@ -143,11 +175,15 @@ class KeyboardController: NSObject {
                 ]
                 
                 for (action, slot) in quickSlotActions {
-                    if let shortcut = self.appSettings.getShortcut(for: action),
-                       shortcut.matches(event: event) {
-                        logDebug(.keyboard, "Quick slot \(slot) triggered: \(shortcut.displayString)")
-                        delegate.keyboardQuickSlot(slot)
-                        return nil // Consume the event to prevent the beep
+                    if let shortcut = self.appSettings.getShortcut(for: action) {
+                        logDebug(.keyboard, "Checking quick slot \(slot) shortcut: \(shortcut.displayString) against event: \(event.keyCode), modifiers: \(event.modifierFlags.rawValue)")
+                        if shortcut.matches(event: event) {
+                            logInfo(.keyboard, "Quick slot \(slot) triggered: \(shortcut.displayString)")
+                            delegate.keyboardQuickSlot(slot)
+                            return nil // Consume the event to prevent the beep
+                        }
+                    } else {
+                        logDebug(.keyboard, "No shortcut configured for quick slot \(slot)")
                     }
                 }
                 

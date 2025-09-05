@@ -19,6 +19,28 @@ enum DefaultPosition: String, CaseIterable, Codable {
     case remember = "Remember Last Position"
 }
 
+enum MenuBarIcon: String, CaseIterable, Codable {
+    case textQuote = "text.quote"
+    case command = "command"
+    case docText = "doc.text"
+    case textBubble = "text.bubble"
+    case searchText = "rectangle.and.text.magnifyingglass"
+    
+    var displayName: String {
+        switch self {
+        case .textQuote: return "Quote Marks"
+        case .command: return "Command Key"
+        case .docText: return "Document"
+        case .textBubble: return "Speech Bubble"
+        case .searchText: return "Search Text"
+        }
+    }
+    
+    var systemImageName: String {
+        return self.rawValue
+    }
+}
+
 @MainActor
 class AppSettings: ObservableObject {
     @AppStorage("themeMode") var themeMode: String = ThemeMode.auto.rawValue {
@@ -59,6 +81,7 @@ class AppSettings: ObservableObject {
     }
     @AppStorage("showQuickSlotsInMenuBar") var showQuickSlotsInMenuBar: Bool = true
     @AppStorage("menuBarQuickSlotCount") var menuBarQuickSlotCount: Int = 5
+    @AppStorage("menuBarIcon") var menuBarIcon: String = MenuBarIcon.textBubble.rawValue
     
     // Debug Settings
     @AppStorage("debugMode") var debugMode: Bool = false {
@@ -86,6 +109,11 @@ class AppSettings: ObservableObject {
     var position: DefaultPosition {
         get { DefaultPosition(rawValue: defaultPosition) ?? .center }
         set { defaultPosition = newValue.rawValue }
+    }
+    
+    var selectedMenuBarIcon: MenuBarIcon {
+        get { MenuBarIcon(rawValue: menuBarIcon) ?? .textBubble }
+        set { menuBarIcon = newValue.rawValue }
     }
     
     init() {

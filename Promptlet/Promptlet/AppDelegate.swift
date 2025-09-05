@@ -168,29 +168,6 @@ extension AppDelegate: MenuBarDelegate {
         trackAnalytics(.settingsOpened, properties: ["source": "menu_bar"])
         serviceCoordinator.showSettings()
     }
-    
-    func menuBarResetWindowPosition() {
-        trackAnalytics(.windowPositionReset, properties: ["source": "menu_bar"])
-        serviceCoordinator.resetWindowPosition()
-    }
-    
-    // MARK: - Diagnostic Menu Methods (delegated to DiagnosticService)
-    
-    func menuBarShowShortcutStatus() {
-        diagnosticService.showShortcutStatus(appSettings: appSettings)
-    }
-    
-    func menuBarShowPermissionStatus() {
-        diagnosticService.showPermissionStatus()
-    }
-    
-    func menuBarResetShortcuts() {
-        diagnosticService.resetShortcuts()
-    }
-    
-    func menuBarShowDebugLogs() {
-        diagnosticService.showDebugLogs()
-    }
 }
 
 // MARK: - KeyboardControllerDelegate
@@ -213,6 +190,7 @@ extension AppDelegate: KeyboardControllerDelegate {
     }
     
     func keyboardQuickSlot(_ slot: Int) {
+        logInfo(.keyboard, "AppDelegate: Quick slot \(slot) keyboard shortcut triggered")
         serviceCoordinator.selectQuickSlot(slot)
     }
     
