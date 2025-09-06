@@ -196,6 +196,7 @@ struct DebugSettingsTab: View {
             Button("Reset", role: .destructive) {
                 settings.hasCompletedOnboarding = false
                 settings.onboardingVersion = 0
+                promptStore.clearQuickSlots() // Clear any quick slot assignments from previous onboarding
             }
         } message: {
             Text("The onboarding flow will be shown again on next app launch.")

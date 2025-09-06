@@ -56,7 +56,7 @@ struct ModernOnboardingView: View {
                     QuickSlotsSetupPage(promptStore: promptStore, settings: settings)
                         .transition(.opacity)
                 case 3:
-                    ReadyPage(onTest: testShortcut)
+                    ReadyPage()
                         .transition(.opacity)
                 default:
                     EmptyView()
@@ -150,14 +150,6 @@ struct ModernOnboardingView: View {
         }
     }
     
-    private func testShortcut() {
-        // Trigger the palette to show briefly
-        NotificationCenter.default.post(name: Notification.Name("ShowPaletteTest"), object: nil)
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            NotificationCenter.default.post(name: Notification.Name("HidePaletteTest"), object: nil)
-        }
-    }
     
     private func completeOnboarding() {
         trackAnalytics(.onboardingCompleted, properties: ["total_steps": totalSteps])

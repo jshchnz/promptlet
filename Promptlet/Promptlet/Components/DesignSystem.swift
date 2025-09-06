@@ -25,6 +25,17 @@ enum Animation {
     static let quick = SwiftUI.Animation.easeOut(duration: 0.15)
     static let bounce = SwiftUI.Animation.spring(response: 0.4, dampingFraction: 0.65)
     static let gentle = SwiftUI.Animation.easeInOut(duration: 0.35)
+    
+    // Accessibility-aware animations
+    static func respectingReduceMotion(_ animation: SwiftUI.Animation) -> SwiftUI.Animation? {
+        return NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : animation
+    }
+    
+    static var accessibleSpring: SwiftUI.Animation? { respectingReduceMotion(spring) }
+    static var accessibleSmooth: SwiftUI.Animation? { respectingReduceMotion(smooth) }
+    static var accessibleQuick: SwiftUI.Animation? { respectingReduceMotion(quick) }
+    static var accessibleBounce: SwiftUI.Animation? { respectingReduceMotion(bounce) }
+    static var accessibleGentle: SwiftUI.Animation? { respectingReduceMotion(gentle) }
 }
 
 // MARK: - Visual Effects

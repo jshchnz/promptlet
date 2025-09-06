@@ -11,11 +11,19 @@ import AppKit
 struct ShortcutFieldView: NSViewRepresentable {
     @Binding var shortcut: KeyboardShortcut?
     let isRequired: Bool
+    let placeholderText: String
+    
+    init(shortcut: Binding<KeyboardShortcut?>, isRequired: Bool = false, placeholderText: String = "–") {
+        self._shortcut = shortcut
+        self.isRequired = isRequired
+        self.placeholderText = placeholderText
+    }
     
     func makeNSView(context: Context) -> ShortcutFieldNSView {
         let view = ShortcutFieldNSView()
         view.shortcut = shortcut
         view.isRequired = isRequired
+        view.placeholderText = placeholderText
         view.delegate = context.coordinator
         return view
     }
@@ -23,6 +31,7 @@ struct ShortcutFieldView: NSViewRepresentable {
     func updateNSView(_ nsView: ShortcutFieldNSView, context: Context) {
         nsView.shortcut = shortcut
         nsView.isRequired = isRequired
+        nsView.placeholderText = placeholderText
     }
     
     func makeCoordinator() -> Coordinator {
@@ -49,6 +58,7 @@ protocol ShortcutFieldDelegate: AnyObject {
 class ShortcutFieldNSView: NSView {
     weak var delegate: ShortcutFieldDelegate?
     var isRequired = false
+    var placeholderText = "–"
     
     var shortcut: KeyboardShortcut? {
         didSet {
@@ -126,7 +136,7 @@ class ShortcutFieldNSView: NSView {
             textField.stringValue = shortcut.displayString
             textField.textColor = .labelColor
         } else {
-            textField.stringValue = "–"
+            textField.stringValue = placeholderText
             textField.textColor = .secondaryLabelColor
         }
         

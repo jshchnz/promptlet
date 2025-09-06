@@ -25,6 +25,8 @@ struct GeneralSettingsTab: View {
                                 }
                                 .pickerStyle(.menu)
                                 .frame(width: 200)
+                                .accessibilityLabel("Palette window position")
+                                .accessibilityIdentifier("position-picker")
                             }
                             
                             Text("Choose where the palette window appears when opened")
@@ -41,6 +43,8 @@ struct GeneralSettingsTab: View {
                                         showResetConfirmation = true
                                     }
                                     .controlSize(.small)
+                                    .accessibilityLabel("Clear saved window position")
+                                    .accessibilityIdentifier("clear-position-button")
                                 }
                             }
                         }
@@ -60,6 +64,8 @@ struct GeneralSettingsTab: View {
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 250)
+                        .accessibilityLabel("Theme appearance")
+                        .accessibilityIdentifier("theme-picker")
                     }
                     
                     Text("Promptlet automatically adjusts to match your system appearance")
@@ -75,6 +81,7 @@ struct GeneralSettingsTab: View {
             GroupBox {
                 VStack(alignment: .leading, spacing: 16) {
                     Toggle("Enable window animations", isOn: $settings.enableAnimations)
+                        .accessibilityIdentifier("animations-toggle")
                     
                     Text("Smooth fade and scale animations when showing/hiding windows")
                         .font(.footnote)
@@ -83,6 +90,7 @@ struct GeneralSettingsTab: View {
                     Divider()
                     
                     Toggle("Show menu bar icon", isOn: $settings.showMenuBarIcon)
+                        .accessibilityIdentifier("menu-bar-icon-toggle")
                     
                     Text("Display Promptlet icon in the menu bar for quick access")
                         .font(.footnote)
@@ -107,6 +115,8 @@ struct GeneralSettingsTab: View {
                             }
                             .pickerStyle(.menu)
                             .frame(width: 180)
+                            .accessibilityLabel("Menu bar icon style")
+                            .accessibilityIdentifier("menu-bar-icon-picker")
                         }
                         
                         Text("Choose which icon appears in your menu bar")

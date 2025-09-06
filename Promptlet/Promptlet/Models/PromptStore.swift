@@ -197,6 +197,34 @@ class PromptStore: ObservableObject {
         prompts[index].recordUsage()
     }
     
+    func clearQuickSlots() {
+        logInfo(.prompt, "Clearing all quick slot assignments")
+        for index in prompts.indices {
+            if prompts[index].quickSlot != nil {
+                logDebug(.prompt, "Removing quick slot \(prompts[index].quickSlot!) from \(prompts[index].title)")
+                let updatedPrompt = Prompt(
+                    id: prompts[index].id,
+                    title: prompts[index].title,
+                    content: prompts[index].content,
+                    tags: prompts[index].tags,
+                    category: prompts[index].category,
+                    defaultEnhancement: prompts[index].defaultEnhancement,
+                    variables: prompts[index].variables,
+                    isFavorite: prompts[index].isFavorite,
+                    isArchived: prompts[index].isArchived,
+                    quickSlot: nil, // Clear the quick slot
+                    createdDate: prompts[index].createdDate,
+                    lastUsedDate: prompts[index].lastUsedDate,
+                    usageCount: prompts[index].usageCount,
+                    perAppEnhancements: prompts[index].perAppEnhancements,
+                    displayOrder: prompts[index].displayOrder
+                )
+                prompts[index] = updatedPrompt
+            }
+        }
+        logInfo(.prompt, "Completed clearing all quick slot assignments")
+    }
+    
     func getEnhancement(for prompt: Prompt) -> Enhancement {
         if !currentAppIdentifier.isEmpty,
            let appEnhancement = prompt.perAppEnhancements[currentAppIdentifier] {

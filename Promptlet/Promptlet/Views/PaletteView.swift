@@ -40,6 +40,9 @@ struct PaletteView: View {
                 TextField("Type to search...", text: $store.searchText)
                     .textFieldStyle(.plain)
                     .focused($isSearchFocused)
+                    .accessibilityLabel("Search prompts")
+                    .accessibilityHint("Type to search through your saved prompts")
+                    .accessibilityIdentifier("search-field")
                     .onChange(of: store.searchText) { _, newValue in
                         if !newValue.isEmpty && newValue.count >= 2 {
                             trackAnalytics(.searchPerformed, properties: [
@@ -60,6 +63,8 @@ struct PaletteView: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Clear search")
+                    .accessibilityIdentifier("clear-search-button")
                 }
                 
                 Divider()
@@ -80,6 +85,10 @@ struct PaletteView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Sort mode: \(store.paletteSortMode.displayName) - Click to toggle between Smart (frecency) and Manual ordering")
+                .accessibilityLabel("Toggle sort mode")
+                .accessibilityValue("Currently \(store.paletteSortMode.displayName)")
+                .accessibilityHint("Switch between smart and manual prompt ordering")
+                .accessibilityIdentifier("sort-mode-button")
             }
             .padding(12)
             
@@ -110,6 +119,7 @@ struct PaletteView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.regular)
+                            .accessibilityIdentifier("create-new-prompt-button")
                             
                             if let shortcut = appSettings.getShortcut(for: .newPrompt) {
                                 Text("or press \(shortcut.displayString)")
@@ -138,6 +148,7 @@ struct PaletteView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.regular)
+                        .accessibilityIdentifier("clear-search-results-button")
                         
                         if onNewPrompt != nil,
                            let shortcut = appSettings.getShortcut(for: .newPrompt) {
@@ -178,7 +189,7 @@ struct PaletteView: View {
                     .onChange(of: controller.selectedIndex) { _, newIndex in
                         if newIndex < store.filteredPrompts.count {
                             let prompt = store.filteredPrompts[newIndex]
-                            withAnimation(.easeInOut(duration: 0.15)) {
+                            withAnimation(Animation.accessibleQuick) {
                                 proxy.scrollTo(prompt.id, anchor: .center)
                             }
                         }
@@ -234,6 +245,13 @@ struct SimplePromptRow: View {
     let prompt: Prompt
     let isSelected: Bool
     
+    var accessibilityDescription: String {
+        let variableCount = prompt.variables.count
+        let variableText = variableCount == 0 ? "no variables" : "\(variableCount) variable\(variableCount == 1 ? "" : "s")"
+        let content = prompt.content.isEmpty ? "" : ". Content: \(prompt.content)"
+        return "\(prompt.title), \(variableText)\(content)"
+    }
+    
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
@@ -272,6 +290,10 @@ struct SimplePromptRow: View {
             RoundedRectangle(cornerRadius: 5)
                 .fill(isSelected ? Color.accentColor : Color.clear)
         )
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityHint(isSelected ? "Press Enter to insert this prompt" : "Press up or down arrow to select, Enter to insert")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityIdentifier("prompt-row-\(prompt.id)")
     }
 }
 

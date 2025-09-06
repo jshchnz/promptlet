@@ -8,8 +8,6 @@
 import SwiftUI
 
 struct ReadyPage: View {
-    let onTest: () -> Void
-    
     @State private var animate = false
     
     var body: some View {
@@ -69,35 +67,9 @@ struct ReadyPage: View {
             )
             .frame(height: 80)
             
-            // Spacing - 30px
+            // Bottom spacing - 55px
             Spacer()
-                .frame(height: 30)
-            
-            // Test button - ~30px
-            Button(action: onTest) {
-                HStack(spacing: 6) {
-                    Image(systemName: "play.circle.fill")
-                        .font(.system(size: 15))
-                    Text("Test it now")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundColor(.accent)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.accent.opacity(0.1))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.accent, lineWidth: 1.5)
-                        )
-                )
-            }
-            .buttonStyle(.plain)
-            
-            // Bottom spacing - 25px
-            Spacer()
-                .frame(height: 25)
+                .frame(height: 55)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

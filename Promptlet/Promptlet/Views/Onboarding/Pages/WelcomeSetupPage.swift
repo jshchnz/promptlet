@@ -15,9 +15,9 @@ struct WelcomeSetupPage: View {
     @State private var logoOpacity: Double = 0.0
     
     private let presets = [
-        ("⌘⇧.", KeyboardShortcut(keyCode: 47, modifierFlags: NSEvent.ModifierFlags([.command, .shift]).rawValue)),
-        ("⌃⇧P", KeyboardShortcut(keyCode: 35, modifierFlags: NSEvent.ModifierFlags([.control, .shift]).rawValue)),
-        ("⌥⌘P", KeyboardShortcut(keyCode: 35, modifierFlags: NSEvent.ModifierFlags([.option, .command]).rawValue))
+        ("⌘ ⇧ .", KeyboardShortcut(keyCode: 47, modifierFlags: NSEvent.ModifierFlags([.command, .shift]).rawValue)),
+        ("⌃ ⇧ P", KeyboardShortcut(keyCode: 35, modifierFlags: NSEvent.ModifierFlags([.control, .shift]).rawValue)),
+        ("⌥ ⌘ P", KeyboardShortcut(keyCode: 35, modifierFlags: NSEvent.ModifierFlags([.option, .command]).rawValue))
     ]
     
     var body: some View {
@@ -122,7 +122,8 @@ struct WelcomeSetupPage: View {
                                 NotificationCenter.default.post(name: NotificationNames.shortcutsChanged, object: nil)
                             }
                         ),
-                        isRequired: true
+                        isRequired: true,
+                        placeholderText: "Click here"
                     )
                     .frame(width: 150, height: 28)
                 }

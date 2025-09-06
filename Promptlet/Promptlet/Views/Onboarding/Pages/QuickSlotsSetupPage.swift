@@ -173,12 +173,6 @@ struct QuickSlotsSetupPage: View {
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.success)
                         }
-                        
-                        Button("Test Quick Slot") {
-                            testQuickSlot()
-                        }
-                        .buttonStyle(.link)
-                        .font(.system(size: 11))
                     }
                     .transition(.scale.combined(with: .opacity))
                 }
@@ -214,12 +208,6 @@ struct QuickSlotsSetupPage: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: hasSelectedPrompt)
-        .onAppear {
-            // Pre-select the first prompt (Ultrathink) by default
-            if selectedPrompt == nil && !showCreatePrompt {
-                selectedPrompt = recommendedPrompts.first
-            }
-        }
         .onDisappear {
             applySelection()
         }
@@ -246,14 +234,6 @@ struct QuickSlotsSetupPage: View {
         newPromptContent = ""
     }
     
-    private func testQuickSlot() {
-        // Simulate pressing ⌘1 by triggering the assigned prompt
-        if let prompt = selectedPrompt {
-            // Show a brief notification that would normally insert the prompt
-            // In actual usage, this would call the insertion service
-            logInfo(.prompt, "Testing quick slot 1: \(prompt.title)")
-        }
-    }
     
     private func applySelection() {
         // Apply the selected prompt to slot 1 in the actual prompt store

@@ -22,6 +22,7 @@ struct SettingsView: View {
                     tag: "general",
                     selection: $selectedTab
                 )
+                .accessibilityIdentifier("general-settings-tab")
                 
                 ToolbarButton(
                     title: "Keyboard",
@@ -29,6 +30,7 @@ struct SettingsView: View {
                     tag: "keyboard",
                     selection: $selectedTab
                 )
+                .accessibilityIdentifier("keyboard-settings-tab")
                 
                 ToolbarButton(
                     title: "Organization",
@@ -36,6 +38,7 @@ struct SettingsView: View {
                     tag: "organization",
                     selection: $selectedTab
                 )
+                .accessibilityIdentifier("organization-settings-tab")
                 
                 ToolbarButton(
                     title: "Quick Slots",
@@ -43,6 +46,7 @@ struct SettingsView: View {
                     tag: "quickslots",
                     selection: $selectedTab
                 )
+                .accessibilityIdentifier("quickslots-settings-tab")
                 
                 ToolbarButton(
                     title: "Debug",
@@ -50,6 +54,7 @@ struct SettingsView: View {
                     tag: "debug",
                     selection: $selectedTab
                 )
+                .accessibilityIdentifier("debug-settings-tab")
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
@@ -109,6 +114,9 @@ struct ToolbarButton: View {
             .frame(width: 80, height: 50)
             .contentShape(Rectangle())
         }
+        .accessibilityLabel("\(title) settings")
+        .accessibilityHint("Switch to \(title.lowercased()) settings tab")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
         .buttonStyle(.plain)
         .background(
             RoundedRectangle(cornerRadius: 6)
