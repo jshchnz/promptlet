@@ -7,6 +7,7 @@
 
 import Cocoa
 import SwiftUI
+import Sentry
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -38,6 +39,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Initialize analytics first
         AnalyticsService.shared.initialize()
         
+        // Initialize Sentry for error monitoring
+        SentrySDK.start { options in
+            options.dsn = "https://fe192ac50de4f94da29af9e961282294@o4509384540880896.ingest.us.sentry.io/4509973741895680"
+            options.debug = true // Enabling debug when first installing is always helpful
+            
+            // Adds IP for users.
+            // For more information, visit: https://docs.sentry.io/platforms/apple/data-management/data-collected/
+            options.sendDefaultPii = true
+        }
+        
         initializeServices()
         initializeControllers()
         setupServiceCoordination()
@@ -52,7 +63,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         permissionService = PermissionManager.shared
         
         // Coordination services
-        serviceCoordinator = ServiceCoordinator(promptStore: promptStore, appSettings: appSettings)
+        serviceCoordinator = ServiceCoordinator(promptStore: promptStore, appSettings: appSettings, appDelegate: self)
         diagnosticService = DiagnosticService()
         appSetupService = AppSetupService()
         
@@ -119,6 +130,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         logSuccess(.app, "Application setup completed successfully")
+    }
+    
+    // MARK: - Sentry Verification (for testing)
+    
+    @objc func testSentryCapture() {
+        // This method can be used to test Sentry error capture
+        // You can call this from the debugger or add a temporary button/menu item
+        let testError = NSError(domain: "PromptletTestError", code: 999, userInfo: [
+            NSLocalizedDescriptionKey: "This is a test error to verify Sentry integration"
+        ])
+        SentrySDK.capture(error: testError)
+        logInfo(.app, "Test error sent to Sentry for verification")
     }
     
     // MARK: - Cleanup

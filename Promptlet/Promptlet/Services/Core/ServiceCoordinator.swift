@@ -15,6 +15,7 @@ class ServiceCoordinator: ObservableObject {
     // Core Services
     private(set) var promptStore: PromptStore
     private(set) var appSettings: AppSettings
+    private weak var appDelegate: AppDelegate?
     
     // Controllers
     private var paletteController: PaletteController?
@@ -32,9 +33,10 @@ class ServiceCoordinator: ObservableObject {
     // Service integration
     private var cancellables = Set<AnyCancellable>()
     
-    init(promptStore: PromptStore, appSettings: AppSettings) {
+    init(promptStore: PromptStore, appSettings: AppSettings, appDelegate: AppDelegate) {
         self.promptStore = promptStore
         self.appSettings = appSettings
+        self.appDelegate = appDelegate
         logInfo(.app, "ServiceCoordinator initialized")
     }
     
@@ -309,7 +311,11 @@ class ServiceCoordinator: ObservableObject {
     // MARK: - Settings Management
     
     func showSettings() {
-        windowManagementService?.showSettingsWindow(with: appSettings, promptStore: promptStore)
+        guard let appDelegate = appDelegate else {
+            logError(.app, "AppDelegate reference is nil in ServiceCoordinator.showSettings()")
+            return
+        }
+        windowManagementService?.showSettingsWindow(with: appSettings, promptStore: promptStore, appDelegate: appDelegate)
     }
     
     func resetWindowPosition() {

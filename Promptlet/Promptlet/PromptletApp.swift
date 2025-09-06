@@ -13,7 +13,7 @@ struct PromptletApp: App {
     
     var body: some Scene {
         Settings {
-            SettingsView(settings: appDelegate.appSettings, promptStore: appDelegate.promptStore)
+            SettingsView(settings: appDelegate.appSettings, promptStore: appDelegate.promptStore, appDelegate: appDelegate)
         }
     }
 }

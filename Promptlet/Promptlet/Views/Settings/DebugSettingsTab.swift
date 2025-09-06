@@ -10,6 +10,7 @@ import SwiftUI
 struct DebugSettingsTab: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var promptStore: PromptStore
+    var appDelegate: AppDelegate
     @State private var showLogs = false
     @State private var showResetOnboardingConfirmation = false
     @State private var showResetPromptsConfirmation = false
@@ -57,7 +58,7 @@ struct DebugSettingsTab: View {
             }
             .groupBoxStyle(SettingsGroupBoxStyle())
             
-            // Onboarding Reset
+            // Testing Tools
             GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Reset onboarding flow for testing")
@@ -66,6 +67,17 @@ struct DebugSettingsTab: View {
                     
                     Button("Reset Onboarding") {
                         showResetOnboardingConfirmation = true
+                    }
+                    .buttonStyle(.bordered)
+                    
+                    Divider()
+                    
+                    Text("Send a test error to Sentry to verify error monitoring integration")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    
+                    Button("Test Sentry Error") {
+                        testSentryCapture()
                     }
                     .buttonStyle(.bordered)
                 }
@@ -342,6 +354,26 @@ struct DebugSettingsTab: View {
         
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(debugInfo, forType: .string)
+    }
+    
+    private func testSentryCapture() {
+        // Call the test method in AppDelegate using the direct reference
+        appDelegate.testSentryCapture()
+        
+        // Show success confirmation
+        let alert = NSAlert()
+        alert.messageText = "Sentry Test Sent"
+        alert.informativeText = """
+        A test error has been sent to Sentry for verification.
+        
+        Check your Sentry dashboard at:
+        https://sentry.io/issues/
+        
+        The test error should appear within a few minutes.
+        """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }
 

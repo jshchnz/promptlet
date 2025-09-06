@@ -37,7 +37,8 @@ protocol WindowManagementServiceProtocol {
     /// - Parameters:
     ///   - settings: The app settings object
     ///   - promptStore: The prompt store for managing prompts
-    func showSettingsWindow(with settings: AppSettings, promptStore: PromptStore)
+    ///   - appDelegate: The app delegate for Sentry testing and other functionality
+    func showSettingsWindow(with settings: AppSettings, promptStore: PromptStore, appDelegate: AppDelegate)
     
     /// Shows the prompt editor window
     /// - Parameters:

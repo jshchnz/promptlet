@@ -21,9 +21,9 @@ class WindowManagementService: WindowManagementServiceProtocol {
     
     // MARK: - Settings Window
     
-    func showSettingsWindow(with settings: AppSettings, promptStore: PromptStore) {
+    func showSettingsWindow(with settings: AppSettings, promptStore: PromptStore, appDelegate: AppDelegate) {
         if settingsWindow == nil {
-            let settingsView = SettingsView(settings: settings, promptStore: promptStore)
+            let settingsView = SettingsView(settings: settings, promptStore: promptStore, appDelegate: appDelegate)
             let hostingView = NSHostingView(rootView: settingsView)
             
             let window = NSWindow(

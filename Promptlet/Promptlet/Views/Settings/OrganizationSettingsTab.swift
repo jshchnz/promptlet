@@ -63,26 +63,47 @@ struct OrganizationSettingsTab: View {
         HStack(spacing: 0) {
             // Sidebar - Categories
             VStack(spacing: 0) {
-                List(selection: $selectedCategory) {
-                    Label("All Prompts", systemImage: "tray.2")
-                        .tag(nil as String?)
+                List {
+                    Button(action: { selectedCategory = nil }) {
+                        HStack {
+                            Label("All Prompts", systemImage: "tray.2")
+                                .foregroundColor(selectedCategory == nil ? .accentColor : .primary)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                     
-                    Label("Uncategorized", systemImage: "folder")
-                        .tag("Uncategorized")
+                    Button(action: { selectedCategory = "Uncategorized" }) {
+                        HStack {
+                            Label("Uncategorized", systemImage: "folder")
+                                .foregroundColor(selectedCategory == "Uncategorized" ? .accentColor : .primary)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                     
                     Section("Categories") {
                         ForEach(promptStore.categories, id: \.self) { category in
-                            Label(category, systemImage: "folder.fill")
-                                .tag(category as String?)
-                                .contextMenu {
-                                    Button("Rename...") {
-                                        renameCategoryName = category
-                                        showingRenameCategory = true
-                                    }
-                                    Button("Delete", role: .destructive) {
-                                        showingDeleteConfirmation = true
-                                    }
+                            Button(action: { selectedCategory = category }) {
+                                HStack {
+                                    Label(category, systemImage: "folder.fill")
+                                        .foregroundColor(selectedCategory == category ? .accentColor : .primary)
+                                    Spacer()
                                 }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button("Rename...") {
+                                    renameCategoryName = category
+                                    showingRenameCategory = true
+                                }
+                                Button("Delete", role: .destructive) {
+                                    showingDeleteConfirmation = true
+                                }
+                            }
                         }
                     }
                 }

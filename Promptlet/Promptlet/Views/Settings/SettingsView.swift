@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var promptStore: PromptStore
+    var appDelegate: AppDelegate
     @State private var selectedTab = "general"
     
     var body: some View {
@@ -75,7 +76,7 @@ struct SettingsView: View {
                 case "quickslots":
                     QuickSlotsSettingsTab(settings: settings, promptStore: promptStore)
                 case "debug":
-                    DebugSettingsTab(settings: settings, promptStore: promptStore)
+                    DebugSettingsTab(settings: settings, promptStore: promptStore, appDelegate: appDelegate)
                 default:
                     GeneralSettingsTab(settings: settings)
                 }
@@ -126,5 +127,5 @@ struct ToolbarButton: View {
 }
 
 #Preview {
-    SettingsView(settings: AppSettings(), promptStore: PromptStore())
+    SettingsView(settings: AppSettings(), promptStore: PromptStore(), appDelegate: AppDelegate())
 }
