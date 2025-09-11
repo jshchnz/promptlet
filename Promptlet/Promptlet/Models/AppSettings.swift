@@ -200,27 +200,82 @@ class AppSettings: ObservableObject {
     }
     
     func updateShortcut(for action: ShortcutAction, shortcut: KeyboardShortcut?) {
-        let oldShortcut = shortcuts[action]
-        
-        if let shortcut = shortcut, shortcut.isValid(for: action) {
-            // Remove any other actions using this same shortcut
-            for (existingAction, existingShortcut) in shortcuts {
-                if existingAction != action && 
-                   existingShortcut.keyCode == shortcut.keyCode && 
-                   existingShortcut.modifierFlags == shortcut.modifierFlags {
-                    shortcuts[existingAction] = nil
-                }
+        // Add safety checks for shortcut updates
+        guard Thread.isMainThread else {
+            #if DEBUG
+            print("[WARNING][Settings] updateShortcut called from background thread, dispatching to main")
+            #endif
+            DispatchQueue.main.async {
+                self.updateShortcut(for: action, shortcut: shortcut)
             }
-            shortcuts[action] = shortcut
-        } else {
-            shortcuts[action] = nil
+            return
         }
         
-        // Track shortcut change
-        if oldShortcut?.keyCode != shortcuts[action]?.keyCode || oldShortcut?.modifierFlags != shortcuts[action]?.modifierFlags {
+        let oldShortcut = shortcuts[action]
+        
+        // Safely update shortcut
+        if let shortcut = shortcut {
+            // Validate shortcut before setting
+            guard shortcut.isValid(for: action) else {
+                #if DEBUG
+                print("[WARNING][Settings] Invalid shortcut for action \(action.rawValue), ignoring update")
+                #endif
+                return
+            }
+            
+            // Remove any other actions using this same shortcut
+            removeConflictingShortcuts(for: shortcut, excluding: action)
+            shortcuts[action] = shortcut
+            
+            #if DEBUG
+            print("[DEBUG][Settings] Updated shortcut for \(action.rawValue): \(shortcut.displayString)")
+            #endif
+        } else {
+            shortcuts[action] = nil
+            #if DEBUG
+            print("[DEBUG][Settings] Cleared shortcut for \(action.rawValue)")
+            #endif
+        }
+        
+        // Track shortcut change safely
+        trackShortcutChange(action: action, oldShortcut: oldShortcut, newShortcut: shortcuts[action])
+    }
+    
+    private func removeConflictingShortcuts(for newShortcut: KeyboardShortcut, excluding action: ShortcutAction) {
+        // Safely remove conflicting shortcuts
+        var conflictingActions: [ShortcutAction] = []
+        
+        for (existingAction, existingShortcut) in shortcuts {
+            // Skip if it's the same action
+            guard existingAction != action else {
+                continue
+            }
+            
+            // Check if shortcuts match
+            if existingShortcut.keyCode == newShortcut.keyCode && 
+               existingShortcut.modifierFlags == newShortcut.modifierFlags {
+                conflictingActions.append(existingAction)
+            }
+        }
+        
+        // Remove conflicts
+        for conflictingAction in conflictingActions {
+            #if DEBUG
+            print("[DEBUG][Settings] Removing conflicting shortcut from \(conflictingAction.rawValue)")
+            #endif
+            shortcuts[conflictingAction] = nil
+        }
+    }
+    
+    private func trackShortcutChange(action: ShortcutAction, oldShortcut: KeyboardShortcut?, newShortcut: KeyboardShortcut?) {
+        // Only track if shortcut actually changed
+        let keyCodeChanged = oldShortcut?.keyCode != newShortcut?.keyCode
+        let modifiersChanged = oldShortcut?.modifierFlags != newShortcut?.modifierFlags
+        
+        if keyCodeChanged || modifiersChanged {
             trackAnalytics(.shortcutChanged, properties: [
                 "action": action.rawValue,
-                "has_shortcut": shortcuts[action] != nil
+                "has_shortcut": newShortcut != nil
             ])
         }
     }

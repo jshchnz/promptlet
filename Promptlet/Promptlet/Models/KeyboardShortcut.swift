@@ -69,26 +69,38 @@ struct KeyboardShortcut: Codable, Equatable, Identifiable {
     
     // Computed property for display string
     var displayString: String {
-        var parts: [String] = []
-        
-        let flags = NSEvent.ModifierFlags(rawValue: modifierFlags)
-        
-        if flags.contains(.control) {
-            parts.append("⌃")
+        do {
+            var parts: [String] = []
+            
+            let flags = NSEvent.ModifierFlags(rawValue: modifierFlags)
+            
+            if flags.contains(.control) {
+                parts.append("⌃")
+            }
+            if flags.contains(.option) {
+                parts.append("⌥")
+            }
+            if flags.contains(.shift) {
+                parts.append("⇧")
+            }
+            if flags.contains(.command) {
+                parts.append("⌘")
+            }
+            
+            let keyString = keyStringFromKeyCode(keyCode)
+            guard !keyString.isEmpty else {
+                return "Key\(keyCode)" // Fallback for unknown keys
+            }
+            
+            parts.append(keyString)
+            
+            let result = parts.joined()
+            return result.isEmpty ? "Key\(keyCode)" : result
+            
+        } catch {
+            // Fallback in case of any issues
+            return "Key\(keyCode)"
         }
-        if flags.contains(.option) {
-            parts.append("⌥")
-        }
-        if flags.contains(.shift) {
-            parts.append("⇧")
-        }
-        if flags.contains(.command) {
-            parts.append("⌘")
-        }
-        
-        parts.append(keyStringFromKeyCode(keyCode))
-        
-        return parts.joined()
     }
     
     // Check if this shortcut matches an NSEvent

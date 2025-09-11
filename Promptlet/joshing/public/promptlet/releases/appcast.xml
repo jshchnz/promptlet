@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Promptlet</title>
+        <item>
+            <title>1.0</title>
+            <pubDate>Tue, 09 Sep 2025 13:58:42 -0700</pubDate>
+            <sparkle:channel>release</sparkle:channel>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://josh.ing/promptlet/releases/Promptlet-1.0.0.dmg" length="5352221" type="application/octet-stream" sparkle:edSignature="EBYmqq5HPrJ4S61OoLw5u7EyGrY8pDwu4ImO++JplTvCgxWGn202U8+V74dWHb74MQXHRQ3J0qQxGvEF7QMuAA=="/>
+        </item>
+    </channel>
+</rss>

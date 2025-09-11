@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		F47A8BA02E6CA20300481915 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = F47A8B9F2E6CA20300481915 /* Sentry */; };
+		F47A8BA72E70CC6200481915 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = F47A8BA62E70CC6200481915 /* Sparkle */; };
 		F481F74F2E69EED900690664 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = F481F74E2E69EED900690664 /* PostHog */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F47A8BA72E70CC6200481915 /* Sparkle in Frameworks */,
 				F481F74F2E69EED900690664 /* PostHog in Frameworks */,
 				F47A8BA02E6CA20300481915 /* Sentry in Frameworks */,
 			);
@@ -87,6 +89,7 @@
 			packageProductDependencies = (
 				F481F74E2E69EED900690664 /* PostHog */,
 				F47A8B9F2E6CA20300481915 /* Sentry */,
+				F47A8BA62E70CC6200481915 /* Sparkle */,
 			);
 			productName = Promptlet;
 			productReference = F45F1D8D2E626E6E002583A6 /* Promptlet.app */;
@@ -119,6 +122,7 @@
 			packageReferences = (
 				F481F74D2E69EED900690664 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				F47A8B9E2E6CA20300481915 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				F47A8BA52E70CC6200481915 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F45F1D8E2E626E6E002583A6 /* Products */;
@@ -365,6 +369,14 @@
 				minimumVersion = 8.55.1;
 			};
 		};
+		F47A8BA52E70CC6200481915 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.7.3;
+			};
+		};
 		F481F74D2E69EED900690664 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
@@ -380,6 +392,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F47A8B9E2E6CA20300481915 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
+		};
+		F47A8BA62E70CC6200481915 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F47A8BA52E70CC6200481915 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 		F481F74E2E69EED900690664 /* PostHog */ = {
 			isa = XCSwiftPackageProductDependency;

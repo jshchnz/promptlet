@@ -54,5 +54,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>SUFeedURL</key>
+	<string>https://josh.ing/promptlet/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>YFuTVJrpVCa3Ys0v7mktej125e1LMV9dZ3SNA7tIF3U=</string>
 </dict>
 </plist>

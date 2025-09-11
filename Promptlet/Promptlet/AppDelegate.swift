@@ -57,7 +57,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func initializeServices() {
         // Core services
-        textInsertionService = TextInsertionService()
+        let textContextService = TextContextService()
+        textInsertionService = TextInsertionService(promptStore: promptStore, textContextService: textContextService)
         windowManagementService = WindowManagementService()
         onboardingService = OnboardingService(settings: appSettings, promptStore: promptStore)
         permissionService = PermissionManager.shared

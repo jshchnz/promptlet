@@ -7,8 +7,13 @@
 
 import SwiftUI
 
+#if canImport(Sparkle)
+import Sparkle
+#endif
+
 struct GeneralSettingsTab: View {
     @ObservedObject var settings: AppSettings
+    @StateObject private var sparkleUpdater = SparkleUpdaterService.shared
     @State private var showResetConfirmation = false
     
     var body: some View {
@@ -149,6 +154,91 @@ struct GeneralSettingsTab: View {
                 }
             } label: {
                 Label("App Information", systemImage: "info.circle")
+            }
+            .groupBoxStyle(SettingsGroupBoxStyle())
+            
+            // Updates
+            GroupBox {
+                VStack(alignment: .leading, spacing: 16) {
+                    LabeledContent("Current Version:") {
+                        Text(sparkleUpdater.getCurrentVersion())
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    LabeledContent("Build:") {
+                        Text(sparkleUpdater.getBuildNumber())
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if let result = sparkleUpdater.updateCheckResult {
+                        Divider()
+                        
+                        HStack {
+                            Image(systemName: result.isError ? "exclamationmark.triangle" : result.hasUpdate ? "arrow.down.circle" : "checkmark.circle")
+                                .foregroundColor(result.isError ? .orange : result.hasUpdate ? .blue : .green)
+                            
+                            Text(result.localizedDescription)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+                        
+                        #if canImport(Sparkle)
+                        if case .updateAvailable(let item) = result {
+                            Button("Install Update") {
+                                sparkleUpdater.installUpdate(for: item)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                        #else
+                        if case .updateAvailable = result {
+                            Button("Install Update") {
+                                // Fallback behavior when Sparkle not available
+                                // This will show an error message
+                                sparkleUpdater.checkForUpdates()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                        #endif
+                    }
+                    
+                    Divider()
+                    
+                    HStack {
+                        Button(action: {
+                            sparkleUpdater.checkForUpdates()
+                        }) {
+                            HStack {
+                                if sparkleUpdater.isCheckingForUpdates {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle())
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                                Text("Check for Updates")
+                            }
+                        }
+                        .disabled(sparkleUpdater.isCheckingForUpdates)
+                        .accessibilityIdentifier("check-updates-button")
+                        
+                        Spacer()
+                        
+                        Toggle("Check automatically", isOn: Binding(
+                            get: { sparkleUpdater.getAutomaticUpdatesEnabled() },
+                            set: { sparkleUpdater.setAutomaticUpdatesEnabled($0) }
+                        ))
+                        .toggleStyle(.switch)
+                        .accessibilityIdentifier("auto-updates-toggle")
+                    }
+                    
+                    Text("Last checked: \(sparkleUpdater.getLastCheckDateString())")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            } label: {
+                Label("Updates", systemImage: "arrow.down.circle")
             }
             .groupBoxStyle(SettingsGroupBoxStyle())
             

@@ -29,6 +29,20 @@ protocol TextInsertionServiceProtocol {
     func setPreviousApp(_ app: NSRunningApplication?)
 }
 
+// MARK: - Text Context Service Protocol
+
+@MainActor
+protocol TextContextServiceProtocol {
+    /// Gets the current text context from the frontmost application
+    /// - Returns: TextContext containing existing content, selected text, and app info
+    func getCurrentTextContext() -> TextContextService.TextContext
+    
+    /// Sets the text content of the currently focused text element
+    /// - Parameter content: The content to set
+    /// - Returns: True if successful, false otherwise
+    func setTextContent(_ content: String) -> Bool
+}
+
 // MARK: - Window Management Service Protocol
 
 @MainActor

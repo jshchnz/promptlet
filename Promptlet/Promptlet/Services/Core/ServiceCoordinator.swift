@@ -130,10 +130,44 @@ class ServiceCoordinator: ObservableObject {
     
     // MARK: - Event Handling
     
+    // Debouncing for shortcut changes to prevent rapid re-registration
+    private var shortcutChangeTimer: Timer?
+    
     private func handleShortcutChanges() {
-        logInfo(.keyboard, "Keyboard shortcuts changed, updating components")
-        keyboardController?.reloadShortcuts()
-        menuBarController?.createMenu()
+        logDebug(.keyboard, "Shortcut change notification received, debouncing...")
+        
+        // Cancel any existing timer
+        shortcutChangeTimer?.invalidate()
+        
+        // Create new timer to debounce rapid changes
+        shortcutChangeTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.performShortcutUpdate()
+            }
+        }
+    }
+    
+    private func performShortcutUpdate() {
+        logInfo(.keyboard, "Performing debounced keyboard shortcut update")
+        
+        // Safely update keyboard controller
+        do {
+            keyboardController?.reloadShortcuts()
+            logSuccess(.keyboard, "Keyboard shortcuts reloaded successfully")
+        } catch {
+            logError(.keyboard, "Failed to reload keyboard shortcuts: \(error)")
+        }
+        
+        // Safely update menu bar
+        do {
+            menuBarController?.createMenu()
+            logDebug(.ui, "Menu bar updated for shortcut changes")
+        } catch {
+            logError(.ui, "Failed to update menu bar: \(error)")
+        }
+        
+        // Clear timer reference
+        shortcutChangeTimer = nil
     }
     
     private func handlePromptStoreChanges() {
@@ -368,6 +402,10 @@ class ServiceCoordinator: ObservableObject {
     
     func cleanup() {
         logInfo(.app, "ServiceCoordinator cleanup starting")
+        
+        // Clean up shortcut change timer
+        shortcutChangeTimer?.invalidate()
+        shortcutChangeTimer = nil
         
         keyboardController?.cleanup()
         NotificationCenter.default.removeObserver(self)
